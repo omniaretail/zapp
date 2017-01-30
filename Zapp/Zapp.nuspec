@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>Zapp</title>
+    <description>Zapp is a Windows process orchestrator for packed apps.</description>
+    <authors>Omnia Retail</authors>
+    <owners>Omnia Retail</owners>
+    <projectUrl>https://github.com/omniaretail/zapp</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/omniaretail/zapp/master/icon.png</iconUrl>
+    <tags>zapp windows process orchestrator</tags>
+  </metadata>
+</package>
