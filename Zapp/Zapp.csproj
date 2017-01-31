@@ -81,6 +81,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Packages\IPackage.cs" />
+    <Compile Include="Packages\IPackageService.cs" />
+    <Compile Include="Packages\ZipPackageService.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
     <Compile Include="Rest\Controllers\SimpleController.cs" />
@@ -90,7 +93,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Orchestration\" />
-    <Folder Include="Packages\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
