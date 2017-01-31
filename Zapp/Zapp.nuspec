@@ -9,6 +9,6 @@
     <owners>Omnia Retail</owners>
     <projectUrl>https://github.com/omniaretail/zapp</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/omniaretail/zapp/master/icon.png</iconUrl>
-    <tags>zapp windows process orchestrator</tags>
+    <tags>sazapp windows process orchestrator</tags>
   </metadata>
 </package>

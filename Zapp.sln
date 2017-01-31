@@ -10,6 +10,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Zapp\Zapp.nuspec = Zapp\Zapp.nuspec
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Tests", "Zapp.Tests\Zapp.Tests.csproj", "{3EEE5656-4EA7-4708-A1BB-82B5F667AB49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{894AE16F-16B3-4310-AFE3-093E4AF79637}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{894AE16F-16B3-4310-AFE3-093E4AF79637}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{894AE16F-16B3-4310-AFE3-093E4AF79637}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EEE5656-4EA7-4708-A1BB-82B5F667AB49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EEE5656-4EA7-4708-A1BB-82B5F667AB49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EEE5656-4EA7-4708-A1BB-82B5F667AB49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EEE5656-4EA7-4708-A1BB-82B5F667AB49}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
