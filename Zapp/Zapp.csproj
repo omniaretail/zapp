@@ -97,6 +97,12 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Zapp.Process\Zapp.Process.csproj">
+      <Project>{0696f6e1-39d9-406a-a800-efae7422aff4}</Project>
+      <Name>Zapp.Process</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
