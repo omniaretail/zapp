@@ -3,6 +3,7 @@ using Owin;
 using System;
 using System.Net.Http.Formatting;
 using System.Web.Http;
+using Swashbuckle.Application;
 
 namespace Zapp.Rest
 {
@@ -43,6 +44,10 @@ namespace Zapp.Rest
                 config.Formatters.Add(new JsonMediaTypeFormatter());
 
                 appBuilder.UseWebApi(config);
+
+                config
+                    .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
+                    .EnableSwaggerUi();
             });
         }
 
