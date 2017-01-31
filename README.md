@@ -27,7 +27,7 @@ using Zapp.Pack;
 
 var server = new ZappServer(
     new OwinRestService("http://localhost:6464/"),	// Instance of: IRestService
-	new ZipPackageService(),						// Instance of: IPackageService
+	new ZipPackageService()							// Instance of: IPackageService
 );
 
 server.Start();

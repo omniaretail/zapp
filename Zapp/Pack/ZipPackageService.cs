@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Zapp.Pack
 {
@@ -20,10 +21,7 @@ namespace Zapp.Pack
         /// <summary>
         /// Loads the package from disk and returns the definition.
         /// </summary>
-        /// <param name="path">Path to the package to load.</param>
-        public IPackage Load(string path)
-        {
-            throw new NotImplementedException();
-        }
+        /// <param name="fileLocation">Path to the package to load.</param>
+        public IPackage Load(string fileLocation) => new ZipPackage(fileLocation);
     }
 }

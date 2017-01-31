@@ -99,6 +99,8 @@
   <ItemGroup>
     <Compile Include="Pack\IPackage.cs" />
     <Compile Include="Pack\IPackageService.cs" />
+    <Compile Include="Pack\ZipPackage.cs" />
+    <Compile Include="Pack\PackageMode.cs" />
     <Compile Include="Pack\ZipPackageService.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
