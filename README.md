@@ -23,7 +23,7 @@ The code below is an example how to use the library.
 ```
 using Zapp;
 using Zapp.Rest;
-using Zapp.Packages;
+using Zapp.Pack;
 
 var server = new ZappServer(
     new OwinRestService("http://localhost:6464/"),	// Instance of: IRestService

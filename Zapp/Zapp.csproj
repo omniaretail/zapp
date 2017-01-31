@@ -81,9 +81,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Packages\IPackage.cs" />
-    <Compile Include="Packages\IPackageService.cs" />
-    <Compile Include="Packages\ZipPackageService.cs" />
+    <Compile Include="Pack\IPackage.cs" />
+    <Compile Include="Pack\IPackageService.cs" />
+    <Compile Include="Pack\ZipPackageService.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
     <Compile Include="Rest\Controllers\SimpleController.cs" />
