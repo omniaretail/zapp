@@ -109,7 +109,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Pack\IFusionPackage.cs" />
     <Compile Include="Pack\IPackageFactory.cs" />
+    <Compile Include="Pack\ZipFusionPackage.cs" />
     <Compile Include="Pack\ZipPackageFactory.cs" />
     <Compile Include="Pack\PackageLoadFailureException.cs" />
     <Compile Include="Pack\IPackage.cs" />
@@ -121,11 +123,11 @@
     <Compile Include="Rest\Controllers\SimpleController.cs" />
     <Compile Include="IZappServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Rest\OwinRestServiceConfig.cs" />
     <Compile Include="ZappModule.cs" />
     <Compile Include="ZappServer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Configuration\" />
     <Folder Include="Orchestration\" />
   </ItemGroup>
   <ItemGroup>

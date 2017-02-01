@@ -1,4 +1,5 @@
 ﻿using Ninject;
+using Zapp.Rest;
 
 namespace Zapp.Example
 {
@@ -9,6 +10,12 @@ namespace Zapp.Example
             var kernel = new StandardKernel(
                 new ZappModule()
             );
+
+            kernel.Bind<OwinRestServiceConfig>()
+                .ToConstant(new OwinRestServiceConfig
+                {
+                    Port = 6464
+                });
 
             var server = kernel.Get<IZappServer>();
             server.Start();

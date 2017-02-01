@@ -24,7 +24,7 @@ namespace Zapp.Pack
         /// Fuses all the given packages into a new package.
         /// </summary>
         /// <param name="packages">Packages which needs to be fused.</param>
-        public IPackage Fuse(IReadOnlyCollection<IPackage> packages)
+        public IFusionPackage Fuse(IReadOnlyCollection<IPackage> packages)
         {
             throw new InvalidOperationException();
         }

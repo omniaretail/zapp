@@ -8,14 +8,15 @@ namespace Zapp.Rest
     [TestFixture, Category("integration"), Explicit]
     public class OwinRestServiceIntegrationTests
     {
-        private const string baseAddress = "http://localhost:6464/";
-
         private OwinRestService sut;
 
         [OneTimeSetUp]
         public void Setup()
         {
-            sut = new OwinRestService(baseAddress);
+            sut = new OwinRestService(new OwinRestServiceConfig
+            {
+                Port = 0
+            });
             sut.Start();
         }
 
@@ -31,15 +32,9 @@ namespace Zapp.Rest
         {
             var client = new HttpClient();
 
-            var response = client.GetAsync($"{baseAddress}api/simple/").Result;
+            var response = client.GetAsync($"http://localhost:6464/api/simple/").Result;
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        }
-
-        [Test]
-        public void Debug()
-        {
-            Console.In.ReadToEnd();
         }
     }
 }

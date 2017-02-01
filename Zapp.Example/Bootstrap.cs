@@ -8,7 +8,10 @@ namespace Zapp.Example
         public static void Main(string[] args)
         {
             var server = new ZappServer(
-                new OwinRestService("http://localhost:6464"),
+                new OwinRestService(new OwinRestServiceConfig
+                {
+                    Port = 6464
+                }),
                 new PackageService(
                     new ZipPackageFactory()
                 )

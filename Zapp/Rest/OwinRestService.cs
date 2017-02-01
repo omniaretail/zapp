@@ -12,17 +12,17 @@ namespace Zapp.Rest
     /// </summary>
     public class OwinRestService : IDisposable, IRestService
     {
-        private readonly string baseAddress;
+        private readonly OwinRestServiceConfig config;
 
         private IDisposable owinInstance;
 
         /// <summary>
         /// Initializes a new <see cref="OwinRestService"/>.
         /// </summary>
-        /// <param name="baseAddress">The address to bind the web listener on.</param>
-        public OwinRestService(string baseAddress)
+        /// <param name="config">The configuration for this instance.</param>
+        public OwinRestService(OwinRestServiceConfig config)
         {
-            this.baseAddress = baseAddress;
+            this.config = config;
         }
 
         /// <summary>
@@ -30,7 +30,9 @@ namespace Zapp.Rest
         /// </summary>
         public void Start()
         {
-            owinInstance = WebApp.Start(baseAddress, appBuilder =>
+            var opts = new StartOptions { Port = config.Port };
+
+            owinInstance = WebApp.Start(opts, appBuilder =>
             {
                 var config = new HttpConfiguration();
 
