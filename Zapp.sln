@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E761A447-9962-4E47-AFD3-E58F794F6363}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		GitVersion.yml = GitVersion.yml
 		README.md = README.md
 		Zapp\Zapp.nuspec = Zapp\Zapp.nuspec
 	EndProjectSection
