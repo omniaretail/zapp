@@ -1,7 +1,6 @@
 ﻿using Ninject;
-using Zapp;
 
-namespace Zap.Example
+namespace Zapp.Example
 {
     public static class BootstrapNinject
     {

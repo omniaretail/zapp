@@ -1,8 +1,7 @@
-﻿using Zapp;
-using Zapp.Pack;
+﻿using Zapp.Pack;
 using Zapp.Rest;
 
-namespace Zap.Example
+namespace Zapp.Example
 {
     public static class Bootstrap
     {

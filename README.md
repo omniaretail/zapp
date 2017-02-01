@@ -19,5 +19,5 @@ Install-Package Zapp
 ## Getting started
 There are many ways to bootstrap `Zapp`:
 
-- [Standard](Zap.Example/Bootstrap.cs) example
-- [Ninject](Zap.Example/BootstrapNinject.cs) example *(not fully working yet)*
+- [Standard](Zapp.Example/Bootstrap.cs) example
+- [Ninject](Zapp.Example/BootstrapNinject.cs) example *(not fully working yet)*

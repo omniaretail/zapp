@@ -16,7 +16,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Tests", "Zapp.Tests\Za
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Process", "Zapp.Process\Zapp.Process.csproj", "{0696F6E1-39D9-406A-A800-EFAE7422AFF4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zap.Example", "Zap.Example\Zap.Example.csproj", "{6AA5BC9F-DE88-4E69-B9D8-153A9AACF1CC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Example", "Zapp.Example\Zapp.Example.csproj", "{6AA5BC9F-DE88-4E69-B9D8-153A9AACF1CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
