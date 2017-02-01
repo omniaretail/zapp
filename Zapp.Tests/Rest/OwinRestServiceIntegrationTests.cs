@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System;
 using System.Net;
 using System.Net.Http;
 
@@ -33,6 +34,12 @@ namespace Zapp.Rest
             var response = client.GetAsync($"{baseAddress}api/simple/").Result;
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        [Test]
+        public void Debug()
+        {
+            Console.In.ReadToEnd();
         }
     }
 }
