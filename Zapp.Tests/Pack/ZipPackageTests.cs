@@ -1,63 +1,95 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 
 namespace Zapp.Pack
 {
     [TestFixture]
     public class ZipPackageTests
     {
+        [Test]
+        public void Constructor_WhenStreamIsNull_ThrowsException()
+        {
+            var stream = default(Stream);
+
+            var exc = Assert.Throws<ArgumentNullException>(() => new ZipPackage(stream));
+
+            Assert.That(exc.ParamName, Is.EqualTo(nameof(stream)));
+        }
+
+        [Test]
+        public void Constructor_WhenStreamIsInvalid_ThrowsException()
+        {
+            var stream = new MemoryStream();
+
+            var exc = Assert.Throws<PackageLoadFailureException>(() => new ZipPackage(stream));
+
+            Assert.That(exc.Message, Is.Not.Empty);
+            Assert.That(exc.InnerException, Is.InstanceOf<InvalidDataException>());
+        }
+
         [TestCase(null), TestCase("")]
-        public void Load_WhenFileLocationIsNullOrEmpty_ThrowsException(string fileLocation)
+        public void ReadEntry_WhenNameIsNullOrEmpty_ThrowsException(string name)
         {
-            var exc = Assert.Throws<ArgumentException>(() => new ZipPackage(fileLocation));
+            var sut = new ZipPackage(CreateEmptyZipArchive());
 
-            Assert.That(exc.ParamName, Is.EqualTo(nameof(fileLocation)));
-            Assert.That(exc.Message, Does.Contain("non-empty"));
+            var exc = Assert.Throws<ArgumentException>(() => sut.ReadEntry(name));
+
+            Assert.That(exc.ParamName, Is.EqualTo(nameof(name)));
         }
 
         [Test]
-        public void Load_WhenFileLocationDoesExists_ReturnsInstance()
+        public void ReadEntry_WhenNameIsNotFound_ThrowsException()
         {
-            var fileLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "empty-package.zip");
+            var name = "non-exist";
 
-            var result = new ZipPackage(fileLocation);
+            var sut = new ZipPackage(CreateEmptyZipArchive());
 
-            Assert.That(result, Is.Not.Null);
+            var exc = Assert.Throws<KeyNotFoundException>(() => sut.ReadEntry(name));
+
+            Assert.That(exc.Message, Does.Contain(name));
         }
 
         [Test]
-        public void GetEntry_WhenEntryExists_ReturnsStream()
+        public void Instance_WhenStreamIsValidZipArchive_ActsAsExpected()
         {
-            var fileLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "non-empty-package.zip");
+            var entryName = "name.ext";
+            var content = Path.GetRandomFileName();
 
-            var sut = new ZipPackage(fileLocation);
-
-            var result = sut.GetEntry("Zapp.dll");
-
-            Assert.That(result, Is.Not.Null);
-        }
-
-        [Test]
-        public void AddEntry_WhenCalled_IsRepresentedInEntriesCollection()
-        {
-            var fileLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "new-package.zip");
-
-            try
+            using (var writeStream = new MemoryStream())
             {
-                using (var writer = new ZipPackage(fileLocation, PackageMode.Write))
+                using (var archive = new ZipArchive(writeStream, ZipArchiveMode.Create))
                 {
-                    writer.AddEntry("test.dll", new MemoryStream());
+                    var entry = archive.CreateEntry(entryName);
+
+                    using (var entryStream = entry.Open())
+                    using (var writer = new StreamWriter(entryStream))
+                    {
+                        writer.WriteLine(content);
+                    }
                 }
 
-                using (var reader = new ZipPackage(fileLocation))
+                using (var readStream = new MemoryStream(writeStream.ToArray()))
+                using (var pack = new ZipPackage(readStream))
+                using (var entry = pack.ReadEntry(entryName))
+                using (var reader = new StreamReader(entry))
                 {
-                    Assert.That(reader.Entries, Does.Contain("test.dll"));
+                    var text = reader.ReadLine();
+
+                    Assert.That(text, Is.EqualTo(content));
                 }
             }
-            finally
+        }
+
+        private Stream CreateEmptyZipArchive()
+        {
+            using (var writeStream = new MemoryStream())
             {
-                File.Delete(fileLocation);
+                (new ZipArchive(writeStream, ZipArchiveMode.Create)).Dispose();
+
+                return new MemoryStream(writeStream.ToArray());
             }
         }
     }

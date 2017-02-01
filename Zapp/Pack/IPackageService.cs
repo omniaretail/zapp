@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 
 namespace Zapp.Pack
 {
@@ -8,10 +9,10 @@ namespace Zapp.Pack
     public interface IPackageService
     {
         /// <summary>
-        /// Loads the package from disk and returns the definition.
+        /// Loads a package from the given stream.
         /// </summary>
-        /// <param name="path">Path to the package to load.</param>
-        IPackage Load(string path);
+        /// <param name="stream">Stream of the package.</param>
+        IPackage Load(Stream stream);
 
         /// <summary>
         /// Fuses all the given packages into a new package.

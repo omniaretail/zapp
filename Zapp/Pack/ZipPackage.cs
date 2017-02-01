@@ -11,48 +11,31 @@ namespace Zapp.Pack
     /// </summary>
     public class ZipPackage : IPackage, IDisposable
     {
-        private Stream stream;
         private ZipArchive archive;
-
-        /// <summary>
-        /// Represents the package's mode.
-        /// </summary>
-        public PackageMode Mode { get; private set; }
-
-        /// <summary>
-        /// Represents if the package is executable.
-        /// </summary>
-        public bool IsExecutable { get; set; }
 
         /// <summary>
         /// Represents all the entries (files) in the package.
         /// </summary>
-        public IReadOnlyCollection<string> Entries => archive?.Entries
-            .Select(e => e.Name)
-            .ToList() ?? new List<string>();
+        public IReadOnlyCollection<string> Entries =>
+            archive?.Entries.Select(e => e.Name).ToList();
 
         /// <summary>
         /// Initializes a new <see cref="ZipPackage"/>.
         /// </summary>
-        /// <param name="fileLocation">Path to the package to load.</param>
-        /// <param name="mode">Mode to use this package.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="fileLocation"/> is empty ordoes not exists.</exception>
-        public ZipPackage(string fileLocation, PackageMode mode = PackageMode.Read)
+        /// <param name="stream">Stream of the package to load.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is not set.</exception>
+        /// <exception cref="PackageLoadFailureException">Thrown when the package failed to load.</exception>
+        public ZipPackage(Stream stream)
         {
-            if (string.IsNullOrEmpty(fileLocation)) throw new ArgumentException("Must be non-empty.", nameof(fileLocation));
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
 
-            Mode = mode;
-
-            switch (mode)
+            try
             {
-                case PackageMode.Read:
-                    stream = File.OpenRead(fileLocation);
-                    archive = new ZipArchive(stream, ZipArchiveMode.Read);
-                    break;
-                case PackageMode.Write:
-                    stream = File.OpenWrite(fileLocation);
-                    archive = new ZipArchive(stream, ZipArchiveMode.Create);
-                    break;
+                archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            }
+            catch (Exception ex)
+            {
+                throw new PackageLoadFailureException("Package failed to load.", ex);
             }
         }
 
@@ -60,18 +43,20 @@ namespace Zapp.Pack
         /// Reads a entry from the package.
         /// </summary>
         /// <param name="name">Name of entry to read.</param>
-        public Stream GetEntry(string name) => archive.GetEntry(name)?.Open();
-
-
-        /// <summary>
-        /// Writes a entry from the package.
-        /// </summary>
-        /// <param name="name">Name of entry to write.</param>
-        /// <param name="stream">Stream of entry to write.</param>
-        public void AddEntry(string name, Stream stream)
+        /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
+        /// <exception cref="KeyNotFoundException">Throw when entry is not found.</exception>
+        public Stream ReadEntry(string name)
         {
-            var writeStream = archive.CreateEntry(name).Open();
-            stream.CopyTo(writeStream);
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("Must be non-empty.", nameof(name));
+
+            var entry = archive?.GetEntry(name);
+
+            if (entry == null)
+            {
+                throw new KeyNotFoundException($"Entry: {name} not found.");
+            }
+
+            return entry.Open();
         }
 
         /// <summary>
@@ -79,13 +64,6 @@ namespace Zapp.Pack
         /// </summary>
         public void Dispose()
         {
-            if (Mode == PackageMode.Read)
-            {
-                stream?.Dispose();
-            }
-
-            stream = null;
-
             archive?.Dispose();
             archive = null;
         }
