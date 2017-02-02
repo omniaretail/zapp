@@ -97,8 +97,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Pack\PackageServiceTests.cs" />
-    <Compile Include="Pack\ZipPackageTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rest\OwinRestServiceIntegrationTests.cs" />
   </ItemGroup>

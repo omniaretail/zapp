@@ -1,7 +1,7 @@
-﻿using Ninject.Extensions.Factory;
+﻿using log4net;
 using Ninject.Modules;
-using Zapp.Pack;
 using Zapp.Rest;
+using Zapp.Server;
 
 namespace Zapp
 {
@@ -16,12 +16,9 @@ namespace Zapp
         public override void Load()
         {
             Bind<IZappServer>().To<ZappServer>();
-
             Bind<IRestService>().To<OwinRestService>();
 
-            Bind<IPackage>().To<ZipPackage>();
-            Bind<IPackageFactory>().ToFactory();
-            Bind<IPackageService>().To<PackageService>();
+            Bind<ILog>().ToMethod(ctx => LogManager.GetLogger(ctx.Request.Target.Member.ReflectedType));
         }
     }
 }

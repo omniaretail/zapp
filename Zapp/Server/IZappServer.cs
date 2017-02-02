@@ -1,4 +1,4 @@
-﻿namespace Zapp
+﻿namespace Zapp.Server
 {
     /// <summary>
     /// Represents a interface which is responsible for all the actions.

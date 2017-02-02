@@ -17,7 +17,6 @@ Install-Package Zapp
 . . . or search for `Zapp` in the NuGet index.
 
 ## Getting started
-There are many ways to bootstrap `Zapp`:
+We currently only support `Ninject` to bootstrap:
 
-- [Standard](Zapp.Example/Bootstrap.cs) example
-- [Ninject](Zapp.Example/BootstrapNinject.cs) example *(not fully working yet)*
+- [Ninject](Zapp.Example/Bootstrap.cs) example 

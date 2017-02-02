@@ -19,7 +19,7 @@ namespace Zapp.Rest
         /// <summary>
         /// Initializes a new <see cref="OwinRestService"/>.
         /// </summary>
-        /// <param name="config">The configuration for this instance.</param>
+        /// <param name="config">Configuration for this class.</param>
         public OwinRestService(OwinRestServiceConfig config)
         {
             this.config = config;

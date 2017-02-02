@@ -1,27 +1,27 @@
-﻿using Zapp.Pack;
+﻿using log4net;
 using Zapp.Rest;
 
-namespace Zapp
+namespace Zapp.Server
 {
     /// <summary>
     /// Represents a class which controls all the services.
     /// </summary>
     public class ZappServer : IZappServer
     {
+        private readonly ILog logService;
         private readonly IRestService apiService;
-        private readonly IPackageService packageService;
 
         /// <summary>
         /// Initializes a new <see cref="ZappServer"/> with the specified dependencies.
         /// </summary>
+        /// <param name="logService">The instance of <see cref="ILog"/> used for logging.</param>
         /// <param name="apiService">The instance of <see cref="IRestService"/> used for web actions.</param>
-        /// <param name="packageService">The instance of <see cref="IPackageService"/> used for package actions.</param>
         public ZappServer(
-            IRestService apiService,
-            IPackageService packageService)
+            ILog logService,
+            IRestService apiService)
         {
+            this.logService = logService;
             this.apiService = apiService;
-            this.packageService = packageService;
         }
 
         /// <summary>
@@ -30,6 +30,8 @@ namespace Zapp
         public void Start()
         {
             apiService.Start();
+
+            logService.Info("ApiService started");
         }
     }
 }
