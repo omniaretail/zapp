@@ -3,9 +3,12 @@ using log4net.Config;
 using log4net.Core;
 using log4net.Layout;
 using Ninject;
+using StackExchange.Redis;
 using System;
 using System.Threading;
+using Zapp.Pack;
 using Zapp.Server;
+using Zapp.Sync;
 
 namespace Zapp.Example
 {
@@ -22,16 +25,15 @@ namespace Zapp.Example
         {
             ConfigureLog();
 
-            var kernel = new StandardKernel(
-                new ZappModule()
-            );
+            using (var kernel = new StandardKernel(new ZappModule()))
+            {
+                var server = kernel.Get<IZappServer>();
+                server.Start();
 
-            var server = kernel.Get<IZappServer>();
-            server.Start();
+                ThreadPool.QueueUserWorkItem((state) => ListenConsoleInput());
 
-            ThreadPool.QueueUserWorkItem((state) => ListenConsoleInput());
-
-            resetEvent.WaitOne();
+                resetEvent.WaitOne();
+            }
         }
 
         private static void ConfigureLog()

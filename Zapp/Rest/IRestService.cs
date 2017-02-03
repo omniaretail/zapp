@@ -6,8 +6,8 @@
     public interface IRestService
     {
         /// <summary>
-        /// Starts the instance of <see cref="IRestService"/>.
+        /// Starts listening on the configured endpoint.
         /// </summary>
-        void Start();
+        void Listen();
     }
 }

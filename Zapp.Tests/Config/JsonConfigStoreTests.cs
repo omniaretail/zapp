@@ -50,7 +50,7 @@ namespace Zapp.Config
         {
             Assert.That(File.Exists(filePath), Is.EqualTo(false));
 
-            var config = sut.Lazy.Value;
+            var config = sut.Value;
 
             Assert.That(config, Is.Not.Null);
             Assert.That(File.Exists(filePath), Is.EqualTo(true));
@@ -67,7 +67,7 @@ namespace Zapp.Config
 
             File.WriteAllText(filePath, content);
 
-            var config = sut.Lazy.Value;
+            var config = sut.Value;
 
             Assert.That(config, Is.Not.Null);
             Assert.That(config.Rest, Is.Not.Null);
@@ -76,7 +76,7 @@ namespace Zapp.Config
 
             File.WriteAllText(filePath, content);
 
-            config = sut.Lazy.Value;
+            config = sut.Value;
 
             Assert.That(config, Is.Not.Null);
             Assert.That(config.Rest, Is.Not.Null);

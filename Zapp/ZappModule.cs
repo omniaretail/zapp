@@ -1,8 +1,10 @@
 ﻿using log4net;
 using Ninject.Modules;
 using Zapp.Config;
+using Zapp.Pack;
 using Zapp.Rest;
 using Zapp.Server;
+using Zapp.Sync;
 
 namespace Zapp
 {
@@ -20,8 +22,11 @@ namespace Zapp
 
             Bind<IZappServer>().To<ZappServer>().InSingletonScope();
             Bind<IRestService>().To<OwinRestService>().InSingletonScope();
+            Bind<ISyncService>().To<RedisSyncService>().InSingletonScope();
 
             Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();
+
+            Bind<PackService>().ToSelf();
         }
     }
 }

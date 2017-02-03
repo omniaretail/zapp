@@ -8,8 +8,8 @@ namespace Zapp.Config
     public interface IConfigStore
     {
         /// <summary>
-        /// Represents the lazy for the zapp-config.
+        /// Represents the value for the zapp-config.
         /// </summary>
-        Lazy<ZappConfig> Lazy { get; }
+        ZappConfig Value { get; }
     }
 }

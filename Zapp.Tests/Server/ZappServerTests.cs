@@ -26,7 +26,7 @@ namespace Zapp.Server
         {
             sut.Start();
 
-            kernel.GetMock<IRestService>().Verify(m => m.Start(), Times.Exactly(1));
+            kernel.GetMock<IRestService>().Verify(m => m.Listen(), Times.Exactly(1));
         }
     }
 }

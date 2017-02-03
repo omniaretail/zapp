@@ -35,11 +35,11 @@ namespace Zapp.Rest
         /// <summary>
         /// Starts the current instance of <see cref="OwinRestService"/>.
         /// </summary>
-        public void Start()
+        public void Listen()
         {
             var opts = new StartOptions
             {
-                Port = configStore.Lazy.Value.Rest.Port
+                Port = configStore.Value.Rest.Port
             };
 
             owinInstance = WebApp.Start(opts, Startup);

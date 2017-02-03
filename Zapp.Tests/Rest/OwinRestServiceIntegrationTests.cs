@@ -20,14 +20,14 @@ namespace Zapp.Rest
         {
             var cfg = new ZappConfig();
 
-            kernel.GetMock<IConfigStore>()
-                .Setup(m => m.Lazy)
-                .Returns(() => new Lazy<ZappConfig>(() => cfg));
-
             kernel = new MoqMockingKernel();
 
+            kernel.GetMock<IConfigStore>()
+                .Setup(m => m.Value)
+                .Returns(() => cfg);
+
             sut = kernel.Get<OwinRestService>();
-            sut.Start();
+            sut.Listen();
         }
 
         [OneTimeTearDown]
@@ -42,7 +42,7 @@ namespace Zapp.Rest
         {
             var client = new HttpClient();
 
-            var response = client.GetAsync($"http://localhost:6464/api/simple/").Result;
+            var response = client.GetAsync($"http://localhost:6464/api/clerk/deploy?packageId=test&deployVersion=0").Result;
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }

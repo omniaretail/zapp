@@ -12,5 +12,17 @@ namespace Zapp.Config
         /// </summary>
         [JsonProperty("rest")]
         public RestConfig Rest { get; set; } = new RestConfig();
+
+        /// <summary>
+        /// Represents the config section for the pack-service.
+        /// </summary>
+        [JsonProperty("pack")]
+        public PackConfig Pack { get; set; } = new PackConfig();
+
+        /// <summary>
+        /// Represents the config section for the sync-service.
+        /// </summary>
+        [JsonProperty("sync")]
+        public SyncConfig Sync { get; set; } = new SyncConfig();
     }
 }

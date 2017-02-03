@@ -15,11 +15,12 @@ namespace Zapp.Config
         private readonly ILog logService;
 
         private string filePath;
+        private Lazy<ZappConfig> lazy;
 
         /// <summary>
-        /// Represents the lazy for the zapp-config.
+        /// Represents the value for the zapp-config.
         /// </summary>
-        public Lazy<ZappConfig> Lazy { get; private set; }
+        public ZappConfig Value => lazy.Value;
 
         /// <summary>
         /// Initializes a new <see cref="JsonConfigStore"/>.
@@ -31,7 +32,7 @@ namespace Zapp.Config
 
             filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configFile);
 
-            Lazy = new Lazy<ZappConfig>(() => Resolve());
+            lazy = new Lazy<ZappConfig>(() => Resolve());
         }
 
         private ZappConfig Resolve()
