@@ -6,6 +6,9 @@ using System.Web.Http;
 using Swashbuckle.Application;
 using Zapp.Config;
 using log4net;
+using Ninject;
+using Ninject.Web.Common.OwinHost;
+using Ninject.Web.WebApi.OwinHost;
 
 namespace Zapp.Rest
 {
@@ -14,6 +17,8 @@ namespace Zapp.Rest
     /// </summary>
     public class OwinRestService : IDisposable, IRestService
     {
+        private readonly IKernel kernel;
+
         private readonly ILog logService;
         private readonly IConfigStore configStore;
 
@@ -22,12 +27,16 @@ namespace Zapp.Rest
         /// <summary>
         /// Initializes a new <see cref="OwinRestService"/>.
         /// </summary>
+        /// <param name="kernel">Ninject</param>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Configuration storage instance.</param>
         public OwinRestService(
+            IKernel kernel,
             ILog logService,
             IConfigStore configStore)
         {
+            this.kernel = kernel;
+
             this.logService = logService;
             this.configStore = configStore;
         }
@@ -51,20 +60,16 @@ namespace Zapp.Rest
         {
             var config = new HttpConfiguration();
 
-            config.Routes.MapHttpRoute(
-                name: "Zapp",
-                routeTemplate: "api/{controller}/{id}",
-                defaults: new { id = RouteParameter.Optional }
-            );
+            config.MapHttpAttributeRoutes();
 
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
 
-            app.UseWebApi(config);
-
             config
                 .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
                 .EnableSwaggerUi();
+
+            app.UseNinjectMiddleware(() => kernel).UseNinjectWebApi(config);
         }
 
         /// <summary>

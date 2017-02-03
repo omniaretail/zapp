@@ -5,13 +5,14 @@ using System;
 using System.Net;
 using System.Net.Http;
 using Zapp.Config;
+using Zapp.Server;
 
 namespace Zapp.Rest
 {
     [TestFixture, Category("integration"), Explicit]
     public class OwinRestServiceIntegrationTests
     {
-        private MoqMockingKernel kernel;
+        private IKernel kernel;
 
         private OwinRestService sut;
 
@@ -20,14 +21,12 @@ namespace Zapp.Rest
         {
             var cfg = new ZappConfig();
 
-            kernel = new MoqMockingKernel();
+            kernel = new StandardKernel(new ZappModule());
 
-            kernel.GetMock<IConfigStore>()
-                .Setup(m => m.Value)
-                .Returns(() => cfg);
+            var server = kernel.Get<IZappServer>();
+            server.Start();
 
             sut = kernel.Get<OwinRestService>();
-            sut.Listen();
         }
 
         [OneTimeTearDown]
@@ -42,7 +41,7 @@ namespace Zapp.Rest
         {
             var client = new HttpClient();
 
-            var response = client.GetAsync($"http://localhost:6464/api/clerk/deploy?packageId=test&deployVersion=0").Result;
+            var response = client.GetAsync($"http://localhost:6464/api/clerk/deploy/packageId/deployVersion").Result;
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
