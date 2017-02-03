@@ -1,4 +1,5 @@
 ﻿using log4net;
+using System;
 using Zapp.Rest;
 
 namespace Zapp.Server
@@ -29,9 +30,16 @@ namespace Zapp.Server
         /// </summary>
         public void Start()
         {
-            apiService.Start();
+            try
+            {
+                apiService.Start();
+            }
+            catch (Exception ex)
+            {
+                logService.Fatal("zapp-server failed to start", ex);
 
-            logService.Info("ApiService started");
+                throw;
+            }
         }
     }
 }

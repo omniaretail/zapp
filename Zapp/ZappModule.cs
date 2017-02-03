@@ -1,5 +1,6 @@
 ﻿using log4net;
 using Ninject.Modules;
+using Zapp.Config;
 using Zapp.Rest;
 using Zapp.Server;
 
@@ -15,10 +16,12 @@ namespace Zapp
         /// </summary>
         public override void Load()
         {
-            Bind<IZappServer>().To<ZappServer>();
-            Bind<IRestService>().To<OwinRestService>();
+            Bind<ILog>().ToMethod(ctx => LogManager.GetLogger(ctx.Request.Target.Member.DeclaringType));
 
-            Bind<ILog>().ToMethod(ctx => LogManager.GetLogger(ctx.Request.Target.Member.ReflectedType));
+            Bind<IZappServer>().To<ZappServer>().InSingletonScope();
+            Bind<IRestService>().To<OwinRestService>().InSingletonScope();
+
+            Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();
         }
     }
 }

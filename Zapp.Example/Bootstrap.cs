@@ -1,51 +1,85 @@
-﻿using log4net;
-using log4net.Appender;
+﻿using log4net.Appender;
+using log4net.Config;
+using log4net.Core;
 using log4net.Layout;
-using log4net.Repository.Hierarchy;
 using Ninject;
 using System;
 using System.Threading;
-
-using Zapp.Rest;
 using Zapp.Server;
 
 namespace Zapp.Example
 {
     public static class Bootstrap
     {
+        private static ManualResetEvent resetEvent;
+
+        static Bootstrap()
+        {
+            resetEvent = new ManualResetEvent(false);
+        }
+
         public static void Main(string[] args)
         {
-            BootstrapLog4Net();
+            ConfigureLog();
 
             var kernel = new StandardKernel(
                 new ZappModule()
             );
 
-            kernel.Bind<OwinRestServiceConfig>()
-                .ToConstant(new OwinRestServiceConfig
-                {
-                    Port = 6464
-                });
-
-
             var server = kernel.Get<IZappServer>();
             server.Start();
 
-            // **Note** zapp-server does not keep the ui-thread running.
-            SyncConsoleInput();
+            ThreadPool.QueueUserWorkItem((state) => ListenConsoleInput());
+
+            resetEvent.WaitOne();
         }
 
-        private static void BootstrapLog4Net()
+        private static void ConfigureLog()
         {
-            var tracer = new TraceAppender();
-            var hierarchy = (Hierarchy)LogManager.GetRepository();
-            hierarchy.Root.AddAppender(tracer);
-            var patternLayout = new PatternLayout { ConversionPattern = "%m%n" };
-            tracer.Layout = patternLayout;
-            hierarchy.Configured = true;
+            var appender = new ColoredConsoleAppender
+            {
+                Threshold = Level.All,
+                Layout = new PatternLayout(
+                    "%d{HH:mm:ss} %level [%thread] %logger => %message%newline"
+                ),
+            };
+            appender.AddMapping(new ColoredConsoleAppender.LevelColors
+            {
+                Level = Level.Debug,
+                ForeColor = ColoredConsoleAppender.Colors.Blue
+                    | ColoredConsoleAppender.Colors.HighIntensity
+            });
+            appender.AddMapping(new ColoredConsoleAppender.LevelColors
+            {
+                Level = Level.Info,
+                ForeColor = ColoredConsoleAppender.Colors.White
+                    | ColoredConsoleAppender.Colors.HighIntensity
+            });
+            appender.AddMapping(new ColoredConsoleAppender.LevelColors
+            {
+                Level = Level.Warn,
+                ForeColor = ColoredConsoleAppender.Colors.Yellow
+                    | ColoredConsoleAppender.Colors.HighIntensity
+            });
+            appender.AddMapping(new ColoredConsoleAppender.LevelColors
+            {
+                Level = Level.Error,
+                ForeColor = ColoredConsoleAppender.Colors.Red
+                    | ColoredConsoleAppender.Colors.HighIntensity
+            });
+            appender.AddMapping(new ColoredConsoleAppender.LevelColors
+            {
+                Level = Level.Fatal,
+                ForeColor = ColoredConsoleAppender.Colors.White
+                    | ColoredConsoleAppender.Colors.HighIntensity,
+                BackColor = ColoredConsoleAppender.Colors.Red
+            });
+
+            appender.ActivateOptions();
+            BasicConfigurator.Configure(appender);
         }
 
-        private static void SyncConsoleInput()
+        private static void ListenConsoleInput()
         {
             string userInput = null;
 
@@ -53,6 +87,8 @@ namespace Zapp.Example
             {
                 Thread.Sleep(TimeSpan.FromSeconds(1));
             }
+
+            resetEvent.Set();
         }
     }
 }

@@ -1,22 +1,32 @@
-﻿using NUnit.Framework;
+﻿using Ninject;
+using Ninject.MockingKernel.Moq;
+using NUnit.Framework;
 using System;
 using System.Net;
 using System.Net.Http;
+using Zapp.Config;
 
 namespace Zapp.Rest
 {
     [TestFixture, Category("integration"), Explicit]
     public class OwinRestServiceIntegrationTests
     {
+        private MoqMockingKernel kernel;
+
         private OwinRestService sut;
 
         [OneTimeSetUp]
         public void Setup()
         {
-            sut = new OwinRestService(new OwinRestServiceConfig
-            {
-                Port = 0
-            });
+            var cfg = new ZappConfig();
+
+            kernel.GetMock<IConfigStore>()
+                .Setup(m => m.Lazy)
+                .Returns(() => new Lazy<ZappConfig>(() => cfg));
+
+            kernel = new MoqMockingKernel();
+
+            sut = kernel.Get<OwinRestService>();
             sut.Start();
         }
 

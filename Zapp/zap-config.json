@@ -1,0 +1,9 @@
+﻿{
+  "rest": {
+    "port": 6464
+  },
+  "pack": {
+    "packagesDir": "{root}/pack/*/*.nupkg",
+    "fusionFormat": "{root}/fusion/{name}.zip"
+  }
+}

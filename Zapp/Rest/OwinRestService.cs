@@ -4,6 +4,8 @@ using System;
 using System.Net.Http.Formatting;
 using System.Web.Http;
 using Swashbuckle.Application;
+using Zapp.Config;
+using log4net;
 
 namespace Zapp.Rest
 {
@@ -12,17 +14,22 @@ namespace Zapp.Rest
     /// </summary>
     public class OwinRestService : IDisposable, IRestService
     {
-        private readonly OwinRestServiceConfig config;
+        private readonly ILog logService;
+        private readonly IConfigStore configStore;
 
         private IDisposable owinInstance;
 
         /// <summary>
         /// Initializes a new <see cref="OwinRestService"/>.
         /// </summary>
-        /// <param name="config">Configuration for this class.</param>
-        public OwinRestService(OwinRestServiceConfig config)
+        /// <param name="logService">Service used for logging.</param>
+        /// <param name="configStore">Configuration storage instance.</param>
+        public OwinRestService(
+            ILog logService,
+            IConfigStore configStore)
         {
-            this.config = config;
+            this.logService = logService;
+            this.configStore = configStore;
         }
 
         /// <summary>
@@ -30,27 +37,34 @@ namespace Zapp.Rest
         /// </summary>
         public void Start()
         {
-            var opts = new StartOptions { Port = config.Port };
-
-            owinInstance = WebApp.Start(opts, appBuilder =>
+            var opts = new StartOptions
             {
-                var config = new HttpConfiguration();
+                Port = configStore.Lazy.Value.Rest.Port
+            };
 
-                config.Routes.MapHttpRoute(
-                    name: "Zapp",
-                    routeTemplate: "api/{controller}/{id}",
-                    defaults: new { id = RouteParameter.Optional }
-                );
+            owinInstance = WebApp.Start(opts, Startup);
 
-                config.Formatters.Clear();
-                config.Formatters.Add(new JsonMediaTypeFormatter());
+            logService.Info($"listening on port: {opts.Port}");
+        }
 
-                appBuilder.UseWebApi(config);
+        private void Startup(IAppBuilder app)
+        {
+            var config = new HttpConfiguration();
 
-                config
-                    .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
-                    .EnableSwaggerUi();
-            });
+            config.Routes.MapHttpRoute(
+                name: "Zapp",
+                routeTemplate: "api/{controller}/{id}",
+                defaults: new { id = RouteParameter.Optional }
+            );
+
+            config.Formatters.Clear();
+            config.Formatters.Add(new JsonMediaTypeFormatter());
+
+            app.UseWebApi(config);
+
+            config
+                .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
+                .EnableSwaggerUi();
         }
 
         /// <summary>
