@@ -23,6 +23,7 @@ namespace Zapp
             Bind<IZappServer>().To<ZappServer>().InSingletonScope();
             Bind<IRestService>().To<OwinRestService>().InSingletonScope();
             Bind<ISyncService>().To<RedisSyncService>().InSingletonScope();
+            Bind<IPackService>().To<PackService>().InSingletonScope();
 
             Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();
 

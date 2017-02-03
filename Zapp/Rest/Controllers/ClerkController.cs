@@ -1,5 +1,8 @@
-﻿using System.Web.Http;
-using Zapp.Sync;
+﻿using log4net;
+using System;
+using System.Web.Http;
+using Zapp.Pack;
+using Zapp.Rest.Responses;
 
 namespace Zapp.Rest.Controllers
 {
@@ -8,15 +11,20 @@ namespace Zapp.Rest.Controllers
     /// </summary>
     public class ClerkController : ApiController
     {
-        private readonly ISyncService syncService;
+        private readonly ILog logService;
+        private readonly IPackService packService;
 
         /// <summary>
         /// Initializes a new <see cref="ClerkController"/>.
         /// </summary>
-        /// <param name="syncService">Service used for sync'ing deployments.</param>
-        public ClerkController(ISyncService syncService)
+        /// <param name="logService">Service used for logging.</param>
+        /// <param name="packService">Service used for managing packages.</param>
+        public ClerkController(
+            ILog logService,
+            IPackService packService)
         {
-            this.syncService = syncService;
+            this.logService = logService;
+            this.packService = packService;
         }
 
         /// <summary>
@@ -25,9 +33,43 @@ namespace Zapp.Rest.Controllers
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
         [HttpGet, HttpPost, Route("api/clerk/deploy/{packageId}/{deployVersion}")]
-        public bool Deploy(string packageId, string deployVersion)
+        public GenericResponse Deploy(string packageId, string deployVersion)
         {
-            return syncService.SetPackageDeployVersion(packageId, deployVersion);
+            var response = new GenericResponse();
+
+            try
+            {
+                // todo: make this better (smaller)
+                var deployResult = packService.Deploy(packageId, deployVersion);
+
+                switch(deployResult)
+                {
+                    case PackDeployResult.Success:
+
+                        response.IsSuccess = true;
+
+                        logService.Info($"deployed packageId: {packageId} deployVersion: {deployVersion}");
+
+                        break;
+                    default:
+                    case PackDeployResult.PackageNotFound:
+                    case PackDeployResult.SyncFailed:
+
+                        response.IsSuccess = true;
+                        response.Reason = deployResult.ToString();
+
+                        logService.Error($"deployed failed: {response.Reason}");
+
+                        break;
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                logService.Fatal("deployment crashed.", ex);
+                throw;
+            }
         }
     }
 }

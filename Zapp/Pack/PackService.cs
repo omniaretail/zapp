@@ -3,15 +3,17 @@ using log4net;
 using System;
 using System.Linq;
 using Zapp.Config;
+using Zapp.Sync;
 
 namespace Zapp.Pack
 {
     /// <summary>
     /// Represents a class which handles all the package operations.
     /// </summary>
-    public class PackService
+    public class PackService : IPackService
     {
         private readonly ILog logService;
+        private readonly ISyncService syncService;
         private readonly IConfigStore configStore;
 
         private string packageRootDir;
@@ -20,24 +22,43 @@ namespace Zapp.Pack
         /// Initializes a new <see cref="PackService"/>.
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
+        /// <param name="syncService">Service used for synchronization of package deploy versions.</param>
         /// <param name="configStore">Configuration storage instance.</param>
         public PackService(
             ILog logService,
+            ISyncService syncService,
             IConfigStore configStore)
         {
             this.logService = logService;
+            this.syncService = syncService;
             this.configStore = configStore;
 
             packageRootDir = GetPackageRootDirectory();
         }
 
         /// <summary>
-        /// 
+        /// Deploys the new package.
         /// </summary>
-        public void Load()
+        /// <param name="packageId">Identity of the package.</param>
+        /// <param name="deployVersion">Deploy version of the package.</param>
+        public PackDeployResult Deploy(string packageId, string deployVersion)
         {
-            logService.Info(FindPackage("ClusterAware.Package.Shared", "0.0.21"));
-            logService.Info(FindPackage("ADPSCAS", "0.0.12"));
+            var package = FindPackage(packageId, deployVersion);
+
+            if (string.IsNullOrEmpty(package))
+            {
+                return PackDeployResult.PackageNotFound;
+            }
+
+            bool isSynced = syncService
+                .SetPackageDeployVersion(packageId, deployVersion);
+
+            if (!isSynced)
+            {
+                return PackDeployResult.SyncFailed;
+            }
+
+            return PackDeployResult.Success;
         }
 
         private string GetPackageRootDirectory()

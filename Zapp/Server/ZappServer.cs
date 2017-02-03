@@ -11,6 +11,7 @@ namespace Zapp.Server
     public class ZappServer : IZappServer
     {
         private readonly ILog logService;
+
         private readonly IRestService apiService;
         private readonly ISyncService syncService;
 
