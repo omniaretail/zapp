@@ -58,3 +58,4 @@ There are some services that can be overridden:
 - [`IRestService`](Zapp/Rest/IRestService.cs)
 - [`IConfigStore`](Zapp/Config/IConfigStore.cs)
 - [`ISyncService`](Zapp/Sync/ISyncService.cs)
+- [`IPackService`](Zapp/Pack/IPackService.cs)
