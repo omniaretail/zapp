@@ -45,6 +45,11 @@ The server instance requires a configuration file named: `zapp-config.json`. Thi
   }
 }
 ```
+## Rest services
+
+The service is equipped with a beautiful rest-service. We used swagger to display all the possible actions.
+
+`http://localhost:6464/swagger`
 
 ## Overrideable Services
 
