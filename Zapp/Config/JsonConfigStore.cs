@@ -20,6 +20,7 @@ namespace Zapp.Config
         /// <summary>
         /// Represents the value for the zapp-config.
         /// </summary>
+        /// <inheritdoc />
         public ZappConfig Value => lazy.Value;
 
         /// <summary>

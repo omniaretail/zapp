@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace Zapp.Config
 {
@@ -18,5 +19,11 @@ namespace Zapp.Config
         /// </summary>
         [JsonProperty("packagePattern")]
         public string PackagePattern { get; set; } = "containers-{deployVersion}-dev/{packageId}*.{nupkg,zip}";
+
+        /// <summary>
+        /// Represents a collection of configuration for fusions.
+        /// </summary>
+        [JsonProperty("fusions")]
+        public List<PackFusionConfig> Fusions { get; set; } = new List<PackFusionConfig>();
     }
 }

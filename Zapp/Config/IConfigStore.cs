@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Zapp.Config
+﻿namespace Zapp.Config
 {
     /// <summary>
     /// Represents an interface for loading the <see cref="ZappConfig"/>.

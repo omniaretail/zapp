@@ -1,6 +1,7 @@
 ﻿using AntPathMatching;
 using log4net;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Zapp.Config;
 using Zapp.Sync;
@@ -8,32 +9,84 @@ using Zapp.Sync;
 namespace Zapp.Pack
 {
     /// <summary>
-    /// Represents a class which handles all the package operations.
+    /// Represents a implementation of <see cref="IPackService"/> to handle all package related actions.
     /// </summary>
     public class PackService : IPackService
     {
         private readonly ILog logService;
+
         private readonly ISyncService syncService;
         private readonly IConfigStore configStore;
+
+        private readonly IAntFactory antFactory;
+        private readonly IAntDirectoryFactory antDirectoryFactory;
 
         private string packageRootDir;
 
         /// <summary>
         /// Initializes a new <see cref="PackService"/>.
         /// </summary>
-        /// <param name="logService">Service used for logging.</param>
-        /// <param name="syncService">Service used for synchronization of package deploy versions.</param>
-        /// <param name="configStore">Configuration storage instance.</param>
+        /// <param name="logService">Service for logging.</param>
+        /// <param name="syncService">Service for synchronizing package information.</param>
+        /// <param name="configStore">Store for loading <see cref="ZappConfig"/>.</param>
+        /// <param name="antFactory">Factory for creating <see cref="IAnt"/> instances.</param>
+        /// <param name="antDirectoryFactory">Factory for creating <see cref="IAntDirectory"/> instances.</param>
         public PackService(
             ILog logService,
             ISyncService syncService,
-            IConfigStore configStore)
+            IConfigStore configStore,
+            IAntFactory antFactory,
+            IAntDirectoryFactory antDirectoryFactory)
         {
             this.logService = logService;
+
             this.syncService = syncService;
             this.configStore = configStore;
 
+            this.antFactory = antFactory;
+            this.antDirectoryFactory = antDirectoryFactory;
+
             packageRootDir = GetPackageRootDirectory();
+
+            // todo: packageFactory
+        }
+
+        /// <summary>
+        /// Loads a specific package.
+        /// </summary>
+        /// <param name="version">Version of the package.</param>
+        /// <exception cref="ArgumentNullException">Throw when <paramref name="version"/> is not set.</exception>
+        /// <exception cref="PackageException">Throw when <paramref name="version"/> is not found.</exception>
+        /// <inheritdoc />
+        public IPackage LoadPackage(PackageVersion version)
+        {
+            if (version == null) throw new ArgumentNullException(nameof(version));
+
+            var packageLocation = LocatePackage(version);
+
+            if (string.IsNullOrEmpty(packageLocation))
+            {
+                throw new PackageException("Not found.", version);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Searches for affected fusion packages.
+        /// </summary>
+        /// <param name="packageId">Identity of the package.</param>
+        /// <inheritdoc />
+        public IReadOnlyCollection<string> GetAffectedFusions(string packageId)
+        {
+            if (string.IsNullOrEmpty(packageId)) throw new ArgumentException("Must be non-empty.", nameof(packageId));
+
+            var fusions = configStore.Value.Pack.Fusions;
+
+            return fusions
+                .Where(f => f.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))
+                .Select(f => f.Id)
+                .ToList();
         }
 
         /// <summary>
@@ -41,9 +94,11 @@ namespace Zapp.Pack
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
+        /// <inheritdoc />
+        [Obsolete("moved to deployservice")]
         public PackDeployResult Deploy(string packageId, string deployVersion)
         {
-            var package = FindPackage(packageId, deployVersion);
+            var package = LocatePackage(new PackageVersion(packageId, deployVersion));
 
             if (string.IsNullOrEmpty(package))
             {
@@ -61,33 +116,34 @@ namespace Zapp.Pack
             return PackDeployResult.Success;
         }
 
-        private string GetPackageRootDirectory()
+        private string GetPackageRootDirectory() =>
+            configStore.Value?.Pack?.RootDirectory?
+                .Replace("zappDir", AppDomain.CurrentDomain.BaseDirectory);
+
+        private string GetPackagePattern(string packageId, string deployVersion) =>
+            configStore.Value?.Pack?.PackagePattern?
+                .Replace("packageId", packageId)?
+                .Replace("deployVersion", deployVersion);
+
+        private string LocatePackage(PackageVersion version)
         {
-            PackConfig config = configStore.Value.Pack;
+            var pattern = GetPackagePattern(
+                version.PackageId,
+                version.DeployVersion
+            );
 
-            return config.RootDirectory
-                .Replace("{zappDir}", AppDomain.CurrentDomain.BaseDirectory);
-        }
+            if (string.IsNullOrEmpty(pattern)) return null;
 
-        private string GetPackagePattern(string packageId, string deployVersion)
-        {
-            PackConfig config = configStore.Value.Pack;
+            var matcher = antFactory.CreateNew(pattern);
+            var directorySearcher = antDirectoryFactory.CreateNew(matcher);
 
-            return config.PackagePattern
-                .Replace("{deployVersion}", deployVersion)
-                .Replace("{packageId}", packageId);
-        }
+            var results = directorySearcher
+                .SearchRecursively(packageRootDir, true)?
+                .ToList();
 
-        private string FindPackage(string packageId, string deployVersion)
-        {
-            var pattern = GetPackagePattern(packageId, deployVersion);
-
-            var ant = new Ant(pattern);
-            var andDir = new AntDirectory(ant);
-
-            var files = andDir.SearchRecursively(packageRootDir);
-
-            return files.FirstOrDefault();
+            return (results?.Any() != true || results?.Count != 1)
+                ? null
+                : results.SingleOrDefault();
         }
     }
 }
