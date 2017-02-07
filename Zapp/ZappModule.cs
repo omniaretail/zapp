@@ -3,6 +3,7 @@ using log4net;
 using Ninject.Extensions.Factory;
 using Ninject.Modules;
 using Zapp.Config;
+using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Rest;
 using Zapp.Server;
@@ -27,7 +28,8 @@ namespace Zapp
             Bind<IZappServer>().To<ZappServer>().InSingletonScope();
             Bind<IRestService>().To<OwinRestService>().InSingletonScope();
             Bind<ISyncService>().To<RedisSyncService>().InSingletonScope();
-            Bind<IPackService>().To<FlatFilePackService>().InSingletonScope();
+            Bind<IPackService>().To<FilePackService>().InSingletonScope();
+            Bind<IFusionService>().To<FusionService>().InSingletonScope();
 
             Bind<IAnt>().To<Ant>();
             Bind<IAntFactory>().ToFactory();
@@ -40,6 +42,11 @@ namespace Zapp
 
             Bind<IPackageEntryFactory>().ToFactory();
             Bind<IPackageEntry>().To<LazyPackageEntry>();
+
+            Bind<IFusion>().To<ZipFusion>();
+            Bind<IFusionFactory>().ToFactory();
+
+            Bind<IFusionExtracter>().To<FileFusionExtractor>().InSingletonScope();
         }
     }
 }

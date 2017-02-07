@@ -13,7 +13,7 @@ namespace Zapp.Pack
     {
         private MoqMockingKernel kernel;
 
-        private FlatFilePackService sut;
+        private FilePackService sut;
         private ZappConfig config;
 
         [SetUp]
@@ -29,7 +29,7 @@ namespace Zapp.Pack
                 .Setup(m => m.Value)
                 .Returns(() => config);
 
-            sut = kernel.Get<FlatFilePackService>();
+            sut = kernel.Get<FilePackService>();
 
             // todo: constructor breaks when configstore doesn't provider config.
         }

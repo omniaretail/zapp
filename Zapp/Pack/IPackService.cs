@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zapp.Pack
+﻿namespace Zapp.Pack
 {
     /// <summary>
     /// Represents an interface for managing packages.
@@ -8,16 +6,16 @@ namespace Zapp.Pack
     public interface IPackService
     {
         /// <summary>
+        /// Verifies if the requested package exists.
+        /// </summary>
+        /// <param name="version">Version of the package.</param>
+        bool IsPackageVersionDeployed(PackageVersion version);
+
+        /// <summary>
         /// Loads the package.
         /// </summary>
         /// <param name="version">Version of the package.</param>
         IPackage LoadPackage(PackageVersion version);
-
-        /// <summary>
-        /// Searches for affected fusion packages.
-        /// </summary>
-        /// <param name="packageId">Identity of the package.</param>
-        IReadOnlyCollection<string> GetAffectedFusions(string packageId);
 
         /// <summary>
         /// Deploys the new package.

@@ -6,7 +6,7 @@ namespace Zapp.Config
     /// <summary>
     /// Represents a configuration for a fusion package.
     /// </summary>
-    public class PackFusionConfig
+    public class FusePackConfig
     {
         /// <summary>
         /// Represents the identity of the package.

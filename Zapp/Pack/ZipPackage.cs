@@ -15,7 +15,6 @@ namespace Zapp.Pack
     public class ZipPackage : IPackage, IDisposable
     {
         private ZipArchive archive;
-        private IReadOnlyCollection<ZipArchiveEntry> entries;
 
         private readonly IPackageEntryFactory packageEntryFactory;
 
@@ -45,8 +44,8 @@ namespace Zapp.Pack
 
             try
             {
+
                 archive = new ZipArchive(contentStream, ZipArchiveMode.Read);
-                entries = archive.Entries;
             }
             catch (Exception ex)
             {
@@ -62,9 +61,9 @@ namespace Zapp.Pack
         /// <inheritdoc />
         public IReadOnlyCollection<IPackageEntry> GetEntries()
         {
-            return entries
+            return archive.Entries
                 .Select(e => packageEntryFactory
-                    .CreateNew(e.Name, new LazyStream(e.Open)))
+                    .CreateNew(e.FullName, new LazyStream(e.Open)))
                 .ToList();
         }
 

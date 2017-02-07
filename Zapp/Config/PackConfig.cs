@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+using System;
+using Zapp.Pack;
+using Zapp.Utils;
 
 namespace Zapp.Config
 {
@@ -21,9 +23,23 @@ namespace Zapp.Config
         public string PackagePattern { get; set; } = "containers-{deployVersion}-dev/{packageId}*.{nupkg,zip}";
 
         /// <summary>
-        /// Represents a collection of configuration for fusions.
+        /// Resolves the actual root directory.
         /// </summary>
-        [JsonProperty("fusions")]
-        public List<PackFusionConfig> Fusions { get; set; } = new List<PackFusionConfig>();
+        public string GetActualRootDirectory() => RootDirectory
+            .Replace("{zappDir}", AppDomain.CurrentDomain.BaseDirectory);
+
+        /// <summary>
+        /// Resolves the actual fusion directory.
+        /// </summary>
+        /// <param name="version">Version of the package.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="version"/> is not set.</exception>
+        public string GetActualPackagePattern(PackageVersion version)
+        {
+            Guard.ParamNotNull(version, nameof(version));
+
+            return PackagePattern
+                .Replace("{packageId}", version.PackageId)
+                .Replace("{deployVersion}", version.DeployVersion);
+        }
     }
 }

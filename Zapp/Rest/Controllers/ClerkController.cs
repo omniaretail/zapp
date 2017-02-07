@@ -1,8 +1,8 @@
-﻿using log4net;
-using System;
+﻿using System.Net;
 using System.Web.Http;
+using System.Web.Http.Results;
 using Zapp.Pack;
-using Zapp.Rest.Responses;
+using Zapp.Sync;
 
 namespace Zapp.Rest.Controllers
 {
@@ -11,20 +11,16 @@ namespace Zapp.Rest.Controllers
     /// </summary>
     public class ClerkController : ApiController
     {
-        private readonly ILog logService;
-        private readonly IPackService packService;
+        private readonly ISyncService syncService;
 
         /// <summary>
         /// Initializes a new <see cref="ClerkController"/>.
         /// </summary>
-        /// <param name="logService">Service used for logging.</param>
-        /// <param name="packService">Service used for managing packages.</param>
+        /// <param name="syncService">Service used for syncing package versions.</param>
         public ClerkController(
-            ILog logService,
-            IPackService packService)
+            ISyncService syncService)
         {
-            this.logService = logService;
-            this.packService = packService;
+            this.syncService = syncService;
         }
 
         /// <summary>
@@ -32,45 +28,19 @@ namespace Zapp.Rest.Controllers
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
-        [HttpGet, HttpPost, Route("api/clerk/deploy/{packageId}/{deployVersion}")]
-        public GenericResponse Deploy(string packageId, string deployVersion)
+        [HttpGet, HttpPost, Route("api/clerk/announce/{packageId}/{deployVersion}")]
+        public StatusCodeResult Announce(string packageId, string deployVersion)
         {
-            var response = new GenericResponse();
+            var version = new PackageVersion(packageId, deployVersion);
 
-            try
+            var statusCode = HttpStatusCode.OK;
+
+            if (!syncService.Announce(version))
             {
-                // todo: clean this up! (using status-codes)
-                var version = new PackageVersion(packageId, deployVersion);
-                var deployResult = packService.Deploy(version);
-
-                switch (deployResult)
-                {
-                    case PackDeployResult.Success:
-
-                        response.IsSuccess = true;
-
-                        logService.Info($"deployed packageId: {packageId} deployVersion: {deployVersion}");
-
-                        break;
-                    default:
-                    case PackDeployResult.PackageNotFound:
-                    case PackDeployResult.SyncFailed:
-
-                        response.IsSuccess = true;
-                        response.Reason = deployResult.ToString();
-
-                        logService.Error($"deployed failed: {response.Reason}");
-
-                        break;
-                }
-
-                return response;
+                statusCode = HttpStatusCode.InternalServerError;
             }
-            catch (Exception ex)
-            {
-                logService.Fatal("deployment crashed.", ex);
-                throw;
-            }
+
+            return StatusCode(statusCode);
         }
     }
 }

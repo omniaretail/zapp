@@ -20,6 +20,12 @@ namespace Zapp.Config
         public PackConfig Pack { get; set; } = new PackConfig();
 
         /// <summary>
+        /// Represents the config section for the fusion-service.
+        /// </summary>
+        [JsonProperty("fuse")]
+        public FuseConfig Fuse { get; set; } = new FuseConfig();
+
+        /// <summary>
         /// Represents the config section for the sync-service.
         /// </summary>
         [JsonProperty("sync")]

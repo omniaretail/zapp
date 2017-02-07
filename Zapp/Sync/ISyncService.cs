@@ -16,12 +16,12 @@ namespace Zapp.Sync
         /// Synchronizes the version of the requested package.
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
-        string GetPackageDeployVersion(string packageId);
+        string Sync(string packageId);
 
         /// <summary>
-        /// Synchronizes the version of the requested package to the server.
+        /// Announces the version of the requested package to the server.
         /// </summary>
         /// <param name="version">Version of the package.</param>
-        bool SetPackageDeployVersion(PackageVersion version);
+        bool Announce(PackageVersion version);
     }
 }

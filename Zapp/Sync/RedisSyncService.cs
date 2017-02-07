@@ -50,7 +50,7 @@ namespace Zapp.Sync
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="packageId"/> is not set.</exception>
-        public string GetPackageDeployVersion(string packageId)
+        public string Sync(string packageId)
         {
             Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
 
@@ -62,7 +62,7 @@ namespace Zapp.Sync
         /// </summary>
         /// <param name="version">Version of the package.</param>
         /// <exception cref="ArgumentNullException">Throw when <paramref name="version"/> is not set.</exception>
-        public bool SetPackageDeployVersion(PackageVersion version)
+        public bool Announce(PackageVersion version)
         {
             Guard.ParamNotNull(version, nameof(version));
 

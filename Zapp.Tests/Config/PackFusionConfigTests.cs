@@ -10,7 +10,7 @@ namespace Zapp.Config
         [Test]
         public void Constructor_WhenCalled_SetupProperties()
         {
-            var sut = new PackFusionConfig();
+            var sut = new FusePackConfig();
 
             Assert.That(sut.PackageIds, Is.Not.Null);
         }
@@ -19,7 +19,7 @@ namespace Zapp.Config
         public void JsonConvert_FromAlias_ActsAsExpected()
         {
             var json = "{ id: 'A', packageIds: [ 'B' ] }";
-            var sut = JsonConvert.DeserializeObject<PackFusionConfig>(json);
+            var sut = JsonConvert.DeserializeObject<FusePackConfig>(json);
 
             Assert.That(sut.Id, Is.EqualTo("A"));
             Assert.That(sut.PackageIds.Single(), Is.EqualTo("B"));

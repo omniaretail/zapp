@@ -154,13 +154,24 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Config\FuseConfig.cs" />
     <Compile Include="Config\IConfigStore.cs" />
     <Compile Include="Config\JsonConfigStore.cs" />
     <Compile Include="Config\PackConfig.cs" />
-    <Compile Include="Config\PackFusionConfig.cs" />
+    <Compile Include="Config\FusePackConfig.cs" />
     <Compile Include="Config\SyncConfig.cs" />
     <Compile Include="Config\ZappConfig.cs" />
     <Compile Include="Config\RestConfig.cs" />
+    <Compile Include="Fuse\FileFusionExtractor.cs" />
+    <Compile Include="Fuse\FusionProcessEntry.cs" />
+    <Compile Include="Fuse\FusionService.cs" />
+    <Compile Include="Fuse\FusionMetaEntry.cs" />
+    <Compile Include="Fuse\IFusion.cs" />
+    <Compile Include="Fuse\IFusionExtracter.cs" />
+    <Compile Include="Fuse\IFusionFactory.cs" />
+    <Compile Include="Fuse\IFusionFilter.cs" />
+    <Compile Include="Fuse\IFusionService.cs" />
+    <Compile Include="Fuse\ZipFusion.cs" />
     <Compile Include="Pack\IPackage.cs" />
     <Compile Include="Pack\IPackageEntry.cs" />
     <Compile Include="Pack\IPackageEntryFactory.cs" />
@@ -170,7 +181,7 @@
     <Compile Include="Pack\PackageException.cs" />
     <Compile Include="Pack\PackageVersion.cs" />
     <Compile Include="Pack\PackDeployResult.cs" />
-    <Compile Include="Pack\FlatFilePackService.cs" />
+    <Compile Include="Pack\FilePackService.cs" />
     <Compile Include="Pack\ZipPackage.cs" />
     <Compile Include="Pack\LazyPackageEntry.cs" />
     <Compile Include="Rest\OwinRestService.cs" />

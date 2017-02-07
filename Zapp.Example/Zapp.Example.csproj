@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bootstrap.cs" />
+    <Compile Include="FusionProcessRenameFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -144,6 +145,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Zapp.Process\Zapp.Process.csproj">
+      <Project>{0696f6e1-39d9-406a-a800-efae7422aff4}</Project>
+      <Name>Zapp.Process</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Zapp\Zapp.csproj">
       <Project>{894ae16f-16b3-4310-afe3-093e4af79637}</Project>
       <Name>Zapp</Name>

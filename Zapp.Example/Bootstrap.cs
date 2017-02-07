@@ -6,6 +6,7 @@ using Ninject;
 using StackExchange.Redis;
 using System;
 using System.Threading;
+using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Server;
 using Zapp.Sync;
@@ -27,6 +28,8 @@ namespace Zapp.Example
 
             using (var kernel = new StandardKernel(new ZappModule()))
             {
+                kernel.Bind<IFusionFilter>().To<FusionProcessRenameFilter>();
+                
                 var server = kernel.Get<IZappServer>();
                 server.Start();
 

@@ -13,6 +13,7 @@ namespace Zapp.Config
 
             Assert.That(sut.Rest, Is.Not.Null);
             Assert.That(sut.Pack, Is.Not.Null);
+            Assert.That(sut.Fuse, Is.Not.Null);
             Assert.That(sut.Sync, Is.Not.Null);
         }
 
@@ -24,6 +25,7 @@ namespace Zapp.Config
 
             Assert.That(sut.Rest, Is.Not.Null);
             Assert.That(sut.Pack, Is.Not.Null);
+            Assert.That(sut.Fuse, Is.Not.Null);
             Assert.That(sut.Sync, Is.Not.Null);
         }
     }

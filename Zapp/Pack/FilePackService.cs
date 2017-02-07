@@ -1,7 +1,6 @@
 ﻿using AntPathMatching;
 using log4net;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Zapp.Config;
@@ -13,7 +12,7 @@ namespace Zapp.Pack
     /// <summary>
     /// Represents a implementation of <see cref="IPackService"/> to handle all package related actions.
     /// </summary>
-    public class FlatFilePackService : IPackService
+    public class FilePackService : IPackService
     {
         private readonly ILog logService;
 
@@ -28,7 +27,7 @@ namespace Zapp.Pack
         private string packageRootDir;
 
         /// <summary>
-        /// Initializes a new <see cref="FlatFilePackService"/>.
+        /// Initializes a new <see cref="FilePackService"/>.
         /// </summary>
         /// <param name="logService">Service for logging.</param>
         /// <param name="syncService">Service for synchronizing package information.</param>
@@ -36,7 +35,7 @@ namespace Zapp.Pack
         /// <param name="antFactory">Factory for creating <see cref="IAnt"/> instances.</param>
         /// <param name="antDirectoryFactory">Factory for creating <see cref="IAntDirectory"/> instances.</param>
         /// <param name="packageFactory">Factory for creating <see cref="IPackage"/> instances.</param>
-        public FlatFilePackService(
+        public FilePackService(
             ILog logService,
             ISyncService syncService,
             IConfigStore configStore,
@@ -54,7 +53,19 @@ namespace Zapp.Pack
 
             this.packageFactory = packageFactory;
 
-            packageRootDir = GetPackageRootDirectory();
+            packageRootDir = configStore?.Value?.Pack?
+                .GetActualRootDirectory();
+        }
+
+        /// <summary>
+        /// Verifies if the requested package exists.
+        /// </summary>
+        /// <param name="version">Version of the package.</param>
+        public bool IsPackageVersionDeployed(PackageVersion version)
+        {
+            Guard.ParamNotNull(version, nameof(version));
+
+            return !string.IsNullOrEmpty(LocatePackage(version));
         }
 
         /// <summary>
@@ -74,28 +85,7 @@ namespace Zapp.Pack
                 throw new PackageException("Package not found.", version);
             }
 
-            using (var fs = File.OpenRead(packageLocation))
-            {
-                return packageFactory.CreateNew(version, fs);
-            }
-        }
-
-        /// <summary>
-        /// Searches for affected fusion packages.
-        /// </summary>
-        /// <param name="packageId">Identity of the package.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="packageId"/> is not set.</exception>
-        /// <inheritdoc />
-        public IReadOnlyCollection<string> GetAffectedFusions(string packageId)
-        {
-            Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
-
-            var fusions = configStore.Value.Pack.Fusions;
-
-            return fusions
-                .Where(f => f.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))
-                .Select(f => f.Id)
-                .ToList();
+            return packageFactory.CreateNew(version, File.OpenRead(packageLocation));
         }
 
         /// <summary>
@@ -115,7 +105,7 @@ namespace Zapp.Pack
                 return PackDeployResult.PackageNotFound;
             }
 
-            bool isSynced = syncService.SetPackageDeployVersion(version);
+            bool isSynced = syncService.Announce(version);
 
             if (!isSynced)
             {
@@ -125,21 +115,10 @@ namespace Zapp.Pack
             return PackDeployResult.Success;
         }
 
-        private string GetPackageRootDirectory() =>
-            configStore.Value?.Pack?.RootDirectory?
-                .Replace("{zappDir}", AppDomain.CurrentDomain.BaseDirectory);
-
-        private string GetPackagePattern(string packageId, string deployVersion) =>
-            configStore.Value?.Pack?.PackagePattern?
-                .Replace("{packageId}", packageId)?
-                .Replace("{deployVersion}", deployVersion);
-
         private string LocatePackage(PackageVersion version)
         {
-            var pattern = GetPackagePattern(
-                version.PackageId,
-                version.DeployVersion
-            );
+            var pattern = configStore.Value?.Pack?
+                .GetActualPackagePattern(version);
 
             if (string.IsNullOrEmpty(pattern)) return null;
 
@@ -150,7 +129,7 @@ namespace Zapp.Pack
                 .SearchRecursively(packageRootDir, true)?
                 .ToList();
 
-            return (results?.Any() != true || results?.Count != 1)
+            return (results?.Count != 1)
                 ? null
                 : results.SingleOrDefault();
         }

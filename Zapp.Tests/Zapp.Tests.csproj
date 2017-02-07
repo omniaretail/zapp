@@ -138,12 +138,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\AssetsHelper.cs" />
+    <Compile Include="Config\FuseConfigTests.cs" />
     <Compile Include="Config\JsonConfigStoreTests.cs" />
     <Compile Include="Config\PackConfigTests.cs" />
     <Compile Include="Config\PackFusionConfigTests.cs" />
     <Compile Include="Config\RestConfigTests.cs" />
     <Compile Include="Config\SyncConfigTests.cs" />
     <Compile Include="Config\ZappConfigTests.cs" />
+    <Compile Include="Fuse\FlatFileFusionServiceTests.cs" />
+    <Compile Include="Fuse\FusionMetaEntryTests.cs" />
+    <Compile Include="Fuse\ZipFusionTests.cs" />
     <Compile Include="Pack\PackageExceptionTests.cs" />
     <Compile Include="Pack\PackageVersionTests.cs" />
     <Compile Include="Pack\PackServiceTests.cs" />
