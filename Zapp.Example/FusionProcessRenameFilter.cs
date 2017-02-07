@@ -9,13 +9,17 @@ namespace Zapp.Example
         public void BeforeAddEntry(FusePackConfig config, IPackageEntry entry)
         {
             var processEntry = entry as FusionProcessEntry;
+            var metaEntry = entry as FusionMetaEntry;
 
-            if (processEntry == null)
+            if (processEntry != null)
             {
-                return;
+                processEntry.Name = config.Id;
             }
 
-            processEntry.Name = config.Id;
+            if (metaEntry != null)
+            {
+                metaEntry.SetInfo("entry.file", config.Id);
+            }
         }
     }
 }

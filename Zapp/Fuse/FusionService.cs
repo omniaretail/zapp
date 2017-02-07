@@ -112,14 +112,17 @@ namespace Zapp.Fuse
                         .Select(v => packService.LoadPackage(v))
                         .ToList();
 
-                    foreach (var package in packages)
+                    var entries = packages
+                        .SelectMany(p => p.GetEntries())
+                        .GroupBy(e => e.Name)
+                        .Select(e => e.FirstOrDefault())
+                        .ToList();
+
+                    foreach (var entry in entries)
                     {
-                        foreach (var entry in package.GetEntries())
+                        if (entryFilter.IsMatch(entry.Name))
                         {
-                            if (entryFilter.IsMatch(entry.Name))
-                            {
-                                AddEntryToFusion(fusion, entry, config);
-                            }
+                            AddEntryToFusion(fusion, entry, config);
                         }
                     }
 
