@@ -2,6 +2,8 @@
 using StackExchange.Redis;
 using System;
 using Zapp.Config;
+using Zapp.Pack;
+using Zapp.Utils;
 
 namespace Zapp.Sync
 {
@@ -47,16 +49,25 @@ namespace Zapp.Sync
         /// Synchronizes the version of the requested package from the server.
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
-        /// <returns>Stored deploy version of the requested package.</returns>
-        public string GetPackageDeployVersion(string packageId) => database.StringGet($"package:{packageId}");
+        /// <exception cref="ArgumentException">Thrown when <paramref name="packageId"/> is not set.</exception>
+        public string GetPackageDeployVersion(string packageId)
+        {
+            Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
+
+            return database.StringGet($"package:{packageId}");
+        }
 
         /// <summary>
         /// Synchronizes the version of the requested package to the server.
         /// </summary>
-        /// <param name="packageId">Identity of the package.</param>
-        /// <param name="deployVersion">Deploy version of the package.</param>
-        /// <returns>If the operation was completed or not.</returns>
-        public bool SetPackageDeployVersion(string packageId, string deployVersion) => database.StringSet($"package:{packageId}", deployVersion);
+        /// <param name="version">Version of the package.</param>
+        /// <exception cref="ArgumentNullException">Throw when <paramref name="version"/> is not set.</exception>
+        public bool SetPackageDeployVersion(PackageVersion version)
+        {
+            Guard.ParamNotNull(version, nameof(version));
+
+            return database.StringSet($"package:{version.PackageId}", version.DeployVersion);
+        }
 
         /// <summary>
         /// Releases all resourced used by the <see cref="RedisSyncService"/> instance.

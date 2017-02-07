@@ -13,7 +13,7 @@ namespace Zapp.Pack
     {
         private MoqMockingKernel kernel;
 
-        private PackService sut;
+        private FlatFilePackService sut;
         private ZappConfig config;
 
         [SetUp]
@@ -29,19 +29,9 @@ namespace Zapp.Pack
                 .Setup(m => m.Value)
                 .Returns(() => config);
 
-            sut = kernel.Get<PackService>();
+            sut = kernel.Get<FlatFilePackService>();
 
             // todo: constructor breaks when configstore doesn't provider config.
-        }
-
-        [Test]
-        public void LoadPackage_WhenVersionIsNul_ThrowsException()
-        {
-            var version = default(PackageVersion);
-
-            var exc = Assert.Throws<ArgumentNullException>(() => sut.LoadPackage(version));
-
-            Assert.That(exc.ParamName, Is.EqualTo(nameof(version)));
         }
 
         [Test]

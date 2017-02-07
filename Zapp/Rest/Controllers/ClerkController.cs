@@ -39,10 +39,11 @@ namespace Zapp.Rest.Controllers
 
             try
             {
-                // todo: make this better (smaller)
-                var deployResult = packService.Deploy(packageId, deployVersion);
+                // todo: clean this up! (using status-codes)
+                var version = new PackageVersion(packageId, deployVersion);
+                var deployResult = packService.Deploy(version);
 
-                switch(deployResult)
+                switch (deployResult)
                 {
                     case PackDeployResult.Success:
 

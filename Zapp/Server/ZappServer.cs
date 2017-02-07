@@ -1,5 +1,6 @@
 ﻿using log4net;
 using System;
+using Zapp.Pack;
 using Zapp.Rest;
 using Zapp.Sync;
 
@@ -15,20 +16,27 @@ namespace Zapp.Server
         private readonly IRestService apiService;
         private readonly ISyncService syncService;
 
+        private readonly IPackService packService;
+
         /// <summary>
-        /// Initializes a new <see cref="ZappServer"/> with the specified dependencies.
+        /// Initializes a new <see cref="ZappServer"/>.
         /// </summary>
-        /// <param name="logService">The instance of <see cref="ILog"/> used for logging.</param>
-        /// <param name="apiService">The instance of <see cref="IRestService"/> used for web actions.</param>
-        /// <param name="syncService">The instance of <see cref="ISyncService"/> used for server synchronization.</param>
+        /// <param name="logService">Service used for logging.</param>
+        /// <param name="apiService">Service used for outside communcation.</param>
+        /// <param name="syncService">Service used for package-version synchronization.</param>
+        /// <param name="packService">Service used for packages.</param>
         public ZappServer(
             ILog logService,
             IRestService apiService,
-            ISyncService syncService)
+            ISyncService syncService,
+            IPackService packService)
         {
             this.logService = logService;
+
             this.apiService = apiService;
             this.syncService = syncService;
+
+            this.packService = packService;
         }
 
         /// <summary>

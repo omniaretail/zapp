@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
+using Zapp.Utils;
 
 namespace Zapp.Pack
 {
     /// <summary>
     /// Represents a class with a collaboration of package and it's deploy version.
     /// </summary>
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class PackageVersion : IEquatable<PackageVersion>
     {
         /// <summary>
@@ -25,8 +28,8 @@ namespace Zapp.Pack
         /// <exception cref="ArgumentException">Throw when either <paramref name="packageId"/> or <paramref name="deployVersion"/> is not set.</exception>
         public PackageVersion(string packageId, string deployVersion)
         {
-            if (string.IsNullOrEmpty(packageId)) throw new ArgumentException("Must be non-empty.", nameof(packageId));
-            if (string.IsNullOrEmpty(deployVersion)) throw new ArgumentException("Must be non-empty.", nameof(deployVersion));
+            Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
+            Guard.ParamNotNullOrEmpty(deployVersion, nameof(deployVersion));
 
             PackageId = packageId;
             DeployVersion = deployVersion;
@@ -78,5 +81,7 @@ namespace Zapp.Pack
                 return PackageId.GetHashCode() ^ DeployVersion.GetHashCode();
             }
         }
+
+        private string DebuggerDisplay => $"Version: {PackageId} - {DeployVersion}";
     }
 }

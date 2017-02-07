@@ -1,16 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using Zapp.Utils;
 
 namespace Zapp.Pack
 {
     /// <summary>
     /// Represents an implementation of <see cref="IPackage"/> for compressed packages.
     /// </summary>
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class ZipPackage : IPackage, IDisposable
     {
         private ZipArchive archive;
+        private IReadOnlyCollection<ZipArchiveEntry> entries;
+
+        private readonly IPackageEntryFactory packageEntryFactory;
 
         /// <summary>
         /// Represents the version of the package.
@@ -23,15 +30,30 @@ namespace Zapp.Pack
         /// </summary>
         /// <param name="version"> Version of the package.</param>
         /// <param name="contentStream">Stream of the package content.</param>
-        /// <exception cref="ArgumentException">Throw when either <paramref name="version"/> or <paramref name="contentStream"/> is not set.</exception>
-        public ZipPackage(PackageVersion version, Stream contentStream)
+        /// <param name="packageEntryFactory">Factory for creating <see cref="IPackageEntry"/> instances.</param>
+        /// <exception cref="ArgumentNullException">Throw when either <paramref name="version"/> or <paramref name="contentStream"/> is not set.</exception>
+        /// <exception cref="PackageException">Throw when the <paramref name="contentStream"/> is not a compatible stream.</exception>
+        public ZipPackage(
+            PackageVersion version,
+            Stream contentStream,
+            IPackageEntryFactory packageEntryFactory)
         {
-            if (version == null) throw new ArgumentNullException(nameof(version));
-            if (contentStream == null) throw new ArgumentNullException(nameof(contentStream));
+            Guard.ParamNotNull(version, nameof(version));
+            Guard.ParamNotNull(contentStream, nameof(contentStream));
 
             Version = version;
 
-            archive = new ZipArchive(contentStream, ZipArchiveMode.Read);
+            try
+            {
+                archive = new ZipArchive(contentStream, ZipArchiveMode.Read);
+                entries = archive.Entries;
+            }
+            catch (Exception ex)
+            {
+                throw new PackageException("Package not compatible.", version, ex);
+            }
+
+            this.packageEntryFactory = packageEntryFactory;
         }
 
         /// <summary>
@@ -40,8 +62,13 @@ namespace Zapp.Pack
         /// <inheritdoc />
         public IReadOnlyCollection<IPackageEntry> GetEntries()
         {
-            return null;
+            return entries
+                .Select(e => packageEntryFactory
+                    .CreateNew(e.Name, new LazyStream(e.Open)))
+                .ToList();
         }
+
+        private string DebuggerDisplay => $"Package: {Version.PackageId} - {Version.DeployVersion}";
 
         /// <summary>
         /// Releases all used resourced by the <see cref="ZipPackage"/> instance.

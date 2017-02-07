@@ -1,14 +1,14 @@
-﻿using Microsoft.Owin.Hosting;
-using Owin;
-using System;
-using System.Net.Http.Formatting;
-using System.Web.Http;
-using Swashbuckle.Application;
-using Zapp.Config;
-using log4net;
+﻿using log4net;
+using Microsoft.Owin.Hosting;
 using Ninject;
 using Ninject.Web.Common.OwinHost;
 using Ninject.Web.WebApi.OwinHost;
+using Owin;
+using Swashbuckle.Application;
+using System;
+using System.Net.Http.Formatting;
+using System.Web.Http;
+using Zapp.Config;
 
 namespace Zapp.Rest
 {

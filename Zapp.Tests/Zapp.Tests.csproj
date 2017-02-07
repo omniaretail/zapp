@@ -137,6 +137,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\AssetsHelper.cs" />
     <Compile Include="Config\JsonConfigStoreTests.cs" />
     <Compile Include="Config\PackConfigTests.cs" />
     <Compile Include="Config\PackFusionConfigTests.cs" />
@@ -146,12 +147,17 @@
     <Compile Include="Pack\PackageExceptionTests.cs" />
     <Compile Include="Pack\PackageVersionTests.cs" />
     <Compile Include="Pack\PackServiceTests.cs" />
+    <Compile Include="Pack\ZipPackageTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rest\OwinRestServiceIntegrationTests.cs" />
     <Compile Include="Server\ZappServerTests.cs" />
+    <Compile Include="Utils\GuardTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="Assets\test.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

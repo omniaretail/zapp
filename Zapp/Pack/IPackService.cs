@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Zapp.Pack
 {
@@ -23,9 +22,7 @@ namespace Zapp.Pack
         /// <summary>
         /// Deploys the new package.
         /// </summary>
-        /// <param name="packageId">Identity of the package.</param>
-        /// <param name="deployVersion">Deploy version of the package.</param>
-        [Obsolete]
-        PackDeployResult Deploy(string packageId, string deployVersion);
+        /// <param name="version">Version of the package.</param>
+        PackDeployResult Deploy(PackageVersion version);
     }
 }

@@ -163,13 +163,16 @@
     <Compile Include="Config\RestConfig.cs" />
     <Compile Include="Pack\IPackage.cs" />
     <Compile Include="Pack\IPackageEntry.cs" />
+    <Compile Include="Pack\IPackageEntryFactory.cs" />
     <Compile Include="Pack\IPackageFactory.cs" />
     <Compile Include="Pack\IPackService.cs" />
+    <Compile Include="Pack\LazyStream.cs" />
     <Compile Include="Pack\PackageException.cs" />
     <Compile Include="Pack\PackageVersion.cs" />
     <Compile Include="Pack\PackDeployResult.cs" />
-    <Compile Include="Pack\PackService.cs" />
+    <Compile Include="Pack\FlatFilePackService.cs" />
     <Compile Include="Pack\ZipPackage.cs" />
+    <Compile Include="Pack\LazyPackageEntry.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
     <Compile Include="Rest\Controllers\ClerkController.cs" />
@@ -178,6 +181,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sync\ISyncService.cs" />
     <Compile Include="Sync\RedisSyncService.cs" />
+    <Compile Include="Utils\Guard.cs" />
     <Compile Include="ZappModule.cs" />
     <Compile Include="Server\ZappServer.cs" />
   </ItemGroup>

@@ -3,6 +3,7 @@ using Ninject;
 using Ninject.MockingKernel.Moq;
 using NUnit.Framework;
 using Zapp.Rest;
+using Zapp.Sync;
 
 namespace Zapp.Server
 {
@@ -22,11 +23,12 @@ namespace Zapp.Server
         }
 
         [Test]
-        public void Start_WhenCalled_CascadesToRestService()
+        public void Start_WhenCalled_CascadesToRestServices()
         {
             sut.Start();
 
             kernel.GetMock<IRestService>().Verify(m => m.Listen(), Times.Exactly(1));
+            kernel.GetMock<ISyncService>().Verify(m => m.Connect(), Times.Exactly(1));
         }
     }
 }

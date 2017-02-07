@@ -6,22 +6,6 @@ namespace Zapp.Pack
     [TestFixture]
     public class PackageVersionTests
     {
-        [TestCase(null), TestCase("")]
-        public void Constructor_WhenPackageIdIsNullOrEmpty(string packageId)
-        {
-            var exc = Assert.Throws<ArgumentException>(() => new PackageVersion(packageId, "v1.0.0"));
-
-            Assert.That(exc.ParamName, Is.EqualTo(nameof(packageId)));
-        }
-
-        [TestCase(null), TestCase("")]
-        public void Constructor_WhenDeployVersionIsNullOrEmpty(string deployVersion)
-        {
-            var exc = Assert.Throws<ArgumentException>(() => new PackageVersion("shared", deployVersion));
-
-            Assert.That(exc.ParamName, Is.EqualTo(nameof(deployVersion)));
-        }
-
         [Test]
         public void Equality_WhenPropertiesMatchIgnoreCase_ReturnsExpectedValues()
         {

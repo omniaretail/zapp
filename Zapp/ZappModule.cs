@@ -1,4 +1,6 @@
-﻿using log4net;
+﻿using AntPathMatching;
+using log4net;
+using Ninject.Extensions.Factory;
 using Ninject.Modules;
 using Zapp.Config;
 using Zapp.Pack;
@@ -20,14 +22,24 @@ namespace Zapp
         {
             Bind<ILog>().ToMethod(ctx => LogManager.GetLogger(ctx.Request.Target.Member.DeclaringType));
 
+            Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();
+
             Bind<IZappServer>().To<ZappServer>().InSingletonScope();
             Bind<IRestService>().To<OwinRestService>().InSingletonScope();
             Bind<ISyncService>().To<RedisSyncService>().InSingletonScope();
-            Bind<IPackService>().To<PackService>().InSingletonScope();
+            Bind<IPackService>().To<FlatFilePackService>().InSingletonScope();
 
-            Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();
+            Bind<IAnt>().To<Ant>();
+            Bind<IAntFactory>().ToFactory();
 
-            Bind<PackService>().ToSelf();
+            Bind<IAntDirectory>().To<AntDirectory>();
+            Bind<IAntDirectoryFactory>().ToFactory();
+
+            Bind<IPackageFactory>().ToFactory();
+            Bind<IPackage>().To<ZipPackage>();
+
+            Bind<IPackageEntryFactory>().ToFactory();
+            Bind<IPackageEntry>().To<LazyPackageEntry>();
         }
     }
 }
