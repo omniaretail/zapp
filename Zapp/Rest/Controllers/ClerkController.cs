@@ -1,46 +1,49 @@
 ﻿using System.Net;
 using System.Web.Http;
 using System.Web.Http.Results;
+using Zapp.Deploy;
 using Zapp.Pack;
-using Zapp.Sync;
 
 namespace Zapp.Rest.Controllers
 {
     /// <summary>
-    /// Represents a controller for controlling packages.
+    /// Represents a class which contains clerk-related actions.
     /// </summary>
     public class ClerkController : ApiController
     {
-        private readonly ISyncService syncService;
+        private readonly IDeployService deployService;
 
         /// <summary>
         /// Initializes a new <see cref="ClerkController"/>.
         /// </summary>
-        /// <param name="syncService">Service used for syncing package versions.</param>
+        /// <param name="deployService">Service used for announcing deployments.</param>
         public ClerkController(
-            ISyncService syncService)
+            IDeployService deployService)
         {
-            this.syncService = syncService;
+            this.deployService = deployService;
         }
 
         /// <summary>
-        /// Http method for announcing new deployment versions for packages.
+        /// Announces the new deployed version of a package.
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
         [HttpGet, HttpPost, Route("api/clerk/announce/{packageId}/{deployVersion}")]
         public StatusCodeResult Announce(string packageId, string deployVersion)
         {
-            var version = new PackageVersion(packageId, deployVersion);
+            var announceResult = deployService
+                .Announce(new PackageVersion(packageId, deployVersion));
 
-            var statusCode = HttpStatusCode.OK;
-
-            if (!syncService.Announce(version))
+            switch (announceResult)
             {
-                statusCode = HttpStatusCode.InternalServerError;
+                case AnnounceResult.Ok:
+                    return StatusCode(HttpStatusCode.OK);
+                case AnnounceResult.NotFound:
+                    return StatusCode(HttpStatusCode.NotFound);
+                default:
+                case AnnounceResult.InternalError:
+                    return StatusCode(HttpStatusCode.InternalServerError);
             }
-
-            return StatusCode(statusCode);
         }
     }
 }

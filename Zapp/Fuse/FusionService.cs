@@ -70,20 +70,20 @@ namespace Zapp.Fuse
         /// Starts to fuse all the packages.
         /// </summary>
         /// <inheritdoc />
-        public void Start()
+        public bool TryExtract()
         {
-            var fusions = configStore.Value.Fuse.Fusions;
+            var fusionIds = configStore.Value?.Fuse?.Fusions?
+                .Select(f => f.Id)?
+                .ToList() ?? new List<string>();
 
-            var failedFusions = fusions
-                .Where(f => !TryExtractFusion(f.Id))
-                .ToList();
+            bool globalExtractionResult = TryExtractFusionBatch(fusionIds);
 
-            if (failedFusions.Any())
+            if (!globalExtractionResult)
             {
-                var fusionIds = string.Join(", ", failedFusions.Select(e => e.Id));
-
-                logService.Error($"The following fusions failed to extract: {fusionIds}.");
+                logService.Error($"Failed to extract all fusions.");
             }
+
+            return globalExtractionResult;
         }
 
         /// <summary>
@@ -142,6 +142,14 @@ namespace Zapp.Fuse
 
             return true;
         }
+
+        /// <summary>
+        /// Tries to create new fusion extractions.
+        /// </summary>
+        /// <param name="fusionIds">Identities of the fusion.</param>
+        /// <inheritdoc />
+        public bool TryExtractFusionBatch(IReadOnlyCollection<string> fusionIds) => 
+            fusionIds.All(f => TryExtractFusion(f)) == true;
 
         /// <summary>
         /// Searches for affected fusion packages.

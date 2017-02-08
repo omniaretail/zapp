@@ -138,8 +138,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\AssetsHelper.cs" />
+    <Compile Include="Deploy\DeployServiceTests.cs" />
     <Compile Include="Fuse\FusionProcessEntryTests.cs" />
     <Compile Include="Fuse\FusionServiceTests.cs" />
+    <Compile Include="Schedule\ScheduleServiceTests.cs" />
     <Compile Include="TestBiolerplate.cs" />
     <Compile Include="Config\FuseConfigTests.cs" />
     <Compile Include="Config\JsonConfigStoreTests.cs" />
