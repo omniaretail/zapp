@@ -10,6 +10,8 @@ namespace Zapp.Pack
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class PackageVersion : IEquatable<PackageVersion>
     {
+        private const string unknownVersion = "?";
+
         /// <summary>
         /// Represents the identity of the package.
         /// </summary>
@@ -21,18 +23,22 @@ namespace Zapp.Pack
         public string DeployVersion { get; private set; }
 
         /// <summary>
+        /// Represents if the version is unknown.
+        /// </summary>
+        public bool IsUnknown => DeployVersion == unknownVersion;
+
+        /// <summary>
         /// Initializes a new <see cref="PackageVersion"/>.
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
-        /// <exception cref="ArgumentException">Throw when either <paramref name="packageId"/> or <paramref name="deployVersion"/> is not set.</exception>
-        public PackageVersion(string packageId, string deployVersion)
+        /// <exception cref="ArgumentException">Throw when either <paramref name="packageId"/>  is not set.</exception>
+        public PackageVersion(string packageId, string deployVersion = unknownVersion)
         {
             Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
-            Guard.ParamNotNullOrEmpty(deployVersion, nameof(deployVersion));
 
             PackageId = packageId;
-            DeployVersion = deployVersion;
+            DeployVersion = deployVersion ?? unknownVersion;
         }
 
         /// <summary>

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Zapp.Config;
+using Zapp.Pack;
 
 namespace Zapp.Fuse
 {
@@ -14,15 +14,21 @@ namespace Zapp.Fuse
         void Start();
 
         /// <summary>
-        /// Tries to fuse the latest possible version of the fusion.
+        /// Tries to create a new fusion extraction.
         /// </summary>
-        /// <param name="config">Configuration for the fusion</param>
-        bool TryFuseLatest(FusePackConfig config);
+        /// <param name="fusionId">Identity of the fusion.</param>
+        bool TryExtractFusion(string fusionId);
 
         /// <summary>
         /// Searches for affected fusion packages.
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         IReadOnlyCollection<string> GetAffectedFusions(string packageId);
+
+        /// <summary>
+        /// Gets the package versions from the sync-service for a specific fusion.
+        /// </summary>
+        /// <param name="fusionId">Identity of the fusion.</param>
+        IReadOnlyCollection<PackageVersion> GetPackageVersions(string fusionId);
     }
 }

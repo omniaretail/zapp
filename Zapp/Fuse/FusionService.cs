@@ -1,4 +1,5 @@
 ﻿using AntPathMatching;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,6 +16,8 @@ namespace Zapp.Fuse
     /// </summary>
     public class FusionService : IFusionService
     {
+        private readonly ILog logService;
+
         private readonly IConfigStore configStore;
 
         private readonly IPackService packService;
@@ -30,6 +33,7 @@ namespace Zapp.Fuse
         /// <summary>
         /// Initializes a new <see cref="FusionService"/>.
         /// </summary>
+        /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Store used for loading configuration.</param>
         /// <param name="packService">Service used for loading packages.</param>
         /// <param name="syncService">Service used for synchronization of package versions.</param>
@@ -38,6 +42,7 @@ namespace Zapp.Fuse
         /// <param name="fusionExtractor">Extracttor used for extracting streams of fusions.</param>
         /// <param name="fusionFilters">Filters used for decorating fusion entries.</param>
         public FusionService(
+            ILog logService,
             IConfigStore configStore,
             IPackService packService,
             ISyncService syncService,
@@ -46,6 +51,8 @@ namespace Zapp.Fuse
             IFusionExtracter fusionExtractor,
             IEnumerable<IFusionFilter> fusionFilters)
         {
+            this.logService = logService;
+
             this.configStore = configStore;
 
             this.packService = packService;
@@ -67,44 +74,40 @@ namespace Zapp.Fuse
         {
             var fusions = configStore.Value.Fuse.Fusions;
 
-            foreach (var fusion in fusions)
+            var failedFusions = fusions
+                .Where(f => !TryExtractFusion(f.Id))
+                .ToList();
+
+            if (failedFusions.Any())
             {
-                if (!TryFuseLatest(fusion))
-                {
-                    throw new InvalidOperationException();
-                }
+                var fusionIds = string.Join(", ", failedFusions.Select(e => e.Id));
+
+                logService.Error($"The following fusions failed to extract: {fusionIds}.");
             }
         }
 
         /// <summary>
-        /// Tries to fuse the latest possible version of the fusion.
+        /// Tries to create a new fusion extraction.
         /// </summary>
-        /// <param name="config">Configuration for the fusion</param>
-        /// <exception cref="ArgumentNullException">Throw when <paramref name="config"/> is not set.</exception>
-        public bool TryFuseLatest(FusePackConfig config)
+        /// <param name="fusionId">Identity of the fusion.</param>
+        /// <exception cref="ArgumentException">Throw when <paramref name="fusionId"/> is not set.</exception>
+        public bool TryExtractFusion(string fusionId)
         {
-            Guard.ParamNotNull(config, nameof(config));
+            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
 
-            var syncDeployVersions = config.PackageIds
-                .ToDictionary(k => k, k => syncService.Sync(k));
+            var fusionConfig = GetFusionConfig(fusionId);
+            var packageVersions = GetPackageVersions(fusionConfig.Id);
 
-            if (syncDeployVersions.Values.Any(string.IsNullOrEmpty))
+            if (packageVersions.Any(v => v.IsUnknown) ||
+                packageVersions.Any(v => !packService.IsPackageVersionDeployed(v)))
             {
+                logService.Warn($"Some of the packages for fusion {fusionId} are unknown or not deployed yet.");
                 return false;
             }
 
-            var packageVersions = syncDeployVersions
-                .Select(kvp => new PackageVersion(kvp.Key, kvp.Value))
-                .ToList();
-
-            if (packageVersions.Any(v => !packService.IsPackageVersionDeployed(v)))
+            using (var packageStream = new MemoryStream())
             {
-                return false;
-            }
-
-            using (var stream = new MemoryStream())
-            {
-                var fusion = fusionFactory.CreateNew(stream);
+                var fusion = fusionFactory.CreateNew(packageStream);
 
                 try
                 {
@@ -112,37 +115,28 @@ namespace Zapp.Fuse
                         .Select(v => packService.LoadPackage(v))
                         .ToList();
 
-                    var entries = packages
-                        .SelectMany(p => p.GetEntries())
-                        .GroupBy(e => e.Name)
-                        .Select(e => e.FirstOrDefault())
+                    var entries = GetEntriesForPackages(packages)
+                        .Concat(new IPackageEntry[] {
+                            new FusionMetaEntry(),
+                            new FusionProcessEntry()
+                        })
                         .ToList();
 
                     foreach (var entry in entries)
                     {
-                        if (entryFilter.IsMatch(entry.Name))
-                        {
-                            AddEntryToFusion(fusion, entry, config);
-                        }
+                        AddEntryToFusion(fusion, entry, fusionConfig);
+
+                        logService.Debug($"Entry {entry.Name} added to fusion: {fusionId}");
                     }
-
-                    var metaEntry = new FusionMetaEntry();
-                    metaEntry.SetInfo("entry.file", "Zapp.Process.exe");
-
-                    AddEntryToFusion(fusion, metaEntry, config);
-                    AddEntryToFusion(fusion, new FusionProcessEntry(), config);
                 }
                 finally
                 {
                     (fusion as IDisposable)?.Dispose();
                 }
 
-                // todo: check if this solution is possible: http://stackoverflow.com/a/21991099
-                var evaluated = stream.ToArray();
-
-                using (var readable = new MemoryStream(evaluated))
+                using (var packageStreamReadable = new MemoryStream(packageStream.ToArray()))
                 {
-                    fusionExtractor.Extract(config, readable);
+                    fusionExtractor.Extract(fusionConfig, packageStreamReadable);
                 }
             }
 
@@ -158,12 +152,40 @@ namespace Zapp.Fuse
         {
             Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
 
-            var fusions = configStore.Value.Fuse.Fusions;
+            return configStore.Value?.Fuse?.Fusions?
+                .Where(f => f.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))?
+                .Select(f => f.Id)?
+                .ToList() ?? new List<string>();
+        }
 
-            return fusions
-                .Where(f => f.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))
-                .Select(f => f.Id)
-                .ToList();
+        /// <summary>
+        /// Gets the package versions from the sync-service for a specific fusion.
+        /// </summary>
+        /// <param name="fusionId">Identity of the fusion.</param>
+        /// <exception cref="ArgumentException">Throw when <paramref name="fusionId"/> is not set.</exception>
+        /// <inheritdoc />
+        public IReadOnlyCollection<PackageVersion> GetPackageVersions(string fusionId)
+        {
+            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
+
+            return GetFusionConfig(fusionId)?.PackageIds?
+                .Select(p => new PackageVersion(p, syncService.Sync(p)))?
+                .ToList() ?? new List<PackageVersion>();
+        }
+
+        private FusePackConfig GetFusionConfig(string fusionId)
+        {
+            var result = configStore.Value?.Fuse?.Fusions?
+                .SingleOrDefault(f => string.Equals(f.Id, fusionId, StringComparison.OrdinalIgnoreCase));
+
+            if (result == null)
+            {
+                throw new KeyNotFoundException($"Fusion: {fusionId} not found.");
+            }
+            else
+            {
+                return result;
+            }
         }
 
         private void AddEntryToFusion(
@@ -177,6 +199,16 @@ namespace Zapp.Fuse
             }
 
             fusion.AddEntry(entry);
+        }
+
+        private IReadOnlyCollection<IPackageEntry> GetEntriesForPackages(IReadOnlyCollection<IPackage> packages)
+        {
+            return packages
+                .SelectMany(p => p.GetEntries())
+                .Where(e => entryFilter.IsMatch(e.Name))
+                .GroupBy(e => e.Name)
+                .Select(e => e.FirstOrDefault())
+                .ToList();
         }
     }
 }

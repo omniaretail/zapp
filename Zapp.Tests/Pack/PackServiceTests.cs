@@ -1,42 +1,26 @@
 ﻿using AntPathMatching;
-using Ninject;
 using Ninject.Extensions.Factory;
-using Ninject.MockingKernel.Moq;
 using NUnit.Framework;
-using System;
-using Zapp.Config;
 
 namespace Zapp.Pack
 {
     [TestFixture]
-    public class PackServiceTests
+    public class PackServiceTests : TestBiolerplate<FilePackService>
     {
-        private MoqMockingKernel kernel;
-
-        private FilePackService sut;
-        private ZappConfig config;
-
         [SetUp]
-        public void Setup()
+        public override void Setup()
         {
-            config = new ZappConfig();
+            base.Setup();
 
-            kernel = new MoqMockingKernel();
             kernel.Bind<IAntFactory>().ToFactory();
             kernel.Bind<IAntDirectoryFactory>().ToFactory();
-
-            kernel.GetMock<IConfigStore>()
-                .Setup(m => m.Value)
-                .Returns(() => config);
-
-            sut = kernel.Get<FilePackService>();
-
-            // todo: constructor breaks when configstore doesn't provider config.
         }
 
         [Test]
         public void LoadPackage_WhenPackageDoesNotExists_ThrowsException()
         {
+            var sut = GetSystemUnderTest();
+
             var version = new PackageVersion("shared", "v1.0.0.0");
 
             var exc = Assert.Throws<PackageException>(() => sut.LoadPackage(version));

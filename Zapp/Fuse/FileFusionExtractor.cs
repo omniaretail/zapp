@@ -48,14 +48,12 @@ namespace Zapp.Fuse
             var fusionDirectory = configStore.Value?.Fuse?
                 .GetActualFusionDirectory(config.Id);
 
-            if (!Directory.Exists(fusionDirectory))
-            {
-                Directory.CreateDirectory(fusionDirectory);
-            }
-            else
+            if (Directory.Exists(fusionDirectory))
             {
                 Directory.Delete(fusionDirectory, true);
             }
+
+            Directory.CreateDirectory(fusionDirectory);
 
             using (var archive = new ZipArchive(contentStream))
             {

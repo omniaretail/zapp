@@ -1,8 +1,6 @@
 ﻿using log4net;
 using Moq;
 using Newtonsoft.Json;
-using Ninject;
-using Ninject.MockingKernel.Moq;
 using NUnit.Framework;
 using System;
 using System.IO;
@@ -10,24 +8,15 @@ using System.IO;
 namespace Zapp.Config
 {
     [TestFixture]
-    public class JsonConfigStoreTests
+    public class JsonConfigStoreTests : TestBiolerplate<JsonConfigStore>
     {
-        private MoqMockingKernel kernel;
-
         private string filePath;
-        private JsonConfigStore sut;
-
-        [SetUp]
-        public void Setup()
-        {
-            kernel = new MoqMockingKernel();
-
-            sut = kernel.Get<JsonConfigStore>();
-        }
 
         [TearDown]
-        public void Teardown()
+        public override void Teardown()
         {
+            base.Teardown();
+
             if (File.Exists(filePath))
             {
                 File.Delete(filePath);
@@ -50,6 +39,8 @@ namespace Zapp.Config
         {
             Assert.That(File.Exists(filePath), Is.EqualTo(false));
 
+            var sut = GetSystemUnderTest();
+
             var config = sut.Value;
 
             Assert.That(config, Is.Not.Null);
@@ -66,6 +57,8 @@ namespace Zapp.Config
             var content = JsonConvert.SerializeObject(cfg);
 
             File.WriteAllText(filePath, content);
+
+            var sut = GetSystemUnderTest();
 
             var config = sut.Value;
 

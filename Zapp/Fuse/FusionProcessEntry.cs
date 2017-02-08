@@ -9,13 +9,16 @@ namespace Zapp.Fuse
     /// </summary>
     public class FusionProcessEntry : IPackageEntry
     {
-        private const string entryName = "Zapp.Process.exe";
+        /// <summary>
+        /// Represents the default name of this entry.
+        /// </summary>
+        public const string DefaultEntryName = "Zapp.Process.exe";
 
         /// <summary>
         /// Represents the name of the entry.
         /// </summary>
         /// <inheritdoc />
-        public string Name { get; set; } = entryName;
+        public string Name { get; set; } = DefaultEntryName;
 
         /// <summary>
         /// Opens the entry with a streamed content.
@@ -25,7 +28,7 @@ namespace Zapp.Fuse
 
         private string GetProcessFilePath() => Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory,
-            entryName
+            DefaultEntryName
         );
     }
 }

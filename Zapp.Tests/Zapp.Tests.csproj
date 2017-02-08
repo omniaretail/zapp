@@ -138,6 +138,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\AssetsHelper.cs" />
+    <Compile Include="Fuse\FusionProcessEntryTests.cs" />
+    <Compile Include="Fuse\FusionServiceTests.cs" />
+    <Compile Include="TestBiolerplate.cs" />
     <Compile Include="Config\FuseConfigTests.cs" />
     <Compile Include="Config\JsonConfigStoreTests.cs" />
     <Compile Include="Config\PackConfigTests.cs" />
@@ -145,6 +148,7 @@
     <Compile Include="Config\RestConfigTests.cs" />
     <Compile Include="Config\SyncConfigTests.cs" />
     <Compile Include="Config\ZappConfigTests.cs" />
+    <Compile Include="Fuse\FileFusionExtractorTests.cs" />
     <Compile Include="Fuse\FlatFileFusionServiceTests.cs" />
     <Compile Include="Fuse\FusionMetaEntryTests.cs" />
     <Compile Include="Fuse\ZipFusionTests.cs" />
@@ -168,6 +172,10 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Zapp.Process\Zapp.Process.csproj">
+      <Project>{0696f6e1-39d9-406a-a800-efae7422aff4}</Project>
+      <Name>Zapp.Process</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Zapp\Zapp.csproj">
       <Project>{894ae16f-16b3-4310-afe3-093e4af79637}</Project>
       <Name>Zapp</Name>

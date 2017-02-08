@@ -51,7 +51,7 @@ namespace Zapp.Example
             appender.AddMapping(new ColoredConsoleAppender.LevelColors
             {
                 Level = Level.Debug,
-                ForeColor = ColoredConsoleAppender.Colors.Blue
+                ForeColor = ColoredConsoleAppender.Colors.Cyan
                     | ColoredConsoleAppender.Colors.HighIntensity
             });
             appender.AddMapping(new ColoredConsoleAppender.LevelColors

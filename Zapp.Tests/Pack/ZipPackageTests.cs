@@ -1,5 +1,4 @@
 ﻿using Ninject;
-using Ninject.Extensions.Factory;
 using Ninject.MockingKernel.Moq;
 using NUnit.Framework;
 using System.IO;

@@ -33,6 +33,8 @@ namespace Zapp.Fuse
         public FusionMetaEntry()
         {
             info = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            SetInfo("entry.file", FusionProcessEntry.DefaultEntryName);
         }
 
         /// <summary>
