@@ -3,7 +3,7 @@ using StackExchange.Redis;
 using System;
 using Zapp.Config;
 using Zapp.Pack;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Sync
 {

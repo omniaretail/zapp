@@ -18,6 +18,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Process", "Zapp.Proces
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Example", "Zapp.Example\Zapp.Example.csproj", "{6AA5BC9F-DE88-4E69-B9D8-153A9AACF1CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Core", "Zapp.Core\Zapp.Core.csproj", "{83D2DC0D-1CA2-4D25-A4E5-E9D96E5A66AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zapp.Core.Tests", "Zapp.Core.Tests\Zapp.Core.Tests.csproj", "{6903A5BA-BD35-4E6E-A09C-C674DFF4611E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +44,14 @@ Global
 		{6AA5BC9F-DE88-4E69-B9D8-153A9AACF1CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6AA5BC9F-DE88-4E69-B9D8-153A9AACF1CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6AA5BC9F-DE88-4E69-B9D8-153A9AACF1CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83D2DC0D-1CA2-4D25-A4E5-E9D96E5A66AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83D2DC0D-1CA2-4D25-A4E5-E9D96E5A66AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83D2DC0D-1CA2-4D25-A4E5-E9D96E5A66AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83D2DC0D-1CA2-4D25-A4E5-E9D96E5A66AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6903A5BA-BD35-4E6E-A09C-C674DFF4611E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6903A5BA-BD35-4E6E-A09C-C674DFF4611E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6903A5BA-BD35-4E6E-A09C-C674DFF4611E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6903A5BA-BD35-4E6E-A09C-C674DFF4611E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

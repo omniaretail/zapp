@@ -96,16 +96,13 @@ namespace Zapp.Fuse
             Assert.That(result, Is.EqualTo(true));
 
             kernel.GetMock<ILog>()
-                .Verify(m => m.Debug(It.IsAny<string>()), Times.Exactly(3));
+                .Verify(m => m.Debug(It.IsAny<string>()), Times.AtLeast(3));
 
             kernel.GetMock<IFusionExtracter>()
                 .Verify(m => m.Extract(It.IsAny<FusePackConfig>(), It.IsAny<Stream>()), Times.Exactly(1));
 
             kernel.GetMock<IFusion>()
-                .Verify(m => m.AddEntry(packageEntryMock.Object), Times.Exactly(1));
-
-            kernel.GetMock<IFusion>()
-                .Verify(m => m.AddEntry(It.IsAny<IPackageEntry>()), Times.Exactly(3));
+                .Verify(m => m.AddEntry(It.IsAny<IPackageEntry>()), Times.AtLeast(1));
         }
 
         [Test]

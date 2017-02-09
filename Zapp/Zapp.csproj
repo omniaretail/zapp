@@ -27,6 +27,7 @@
     <RegisterForComInterop>false</RegisterForComInterop>
     <WarningsAsErrors>1591</WarningsAsErrors>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -187,17 +188,21 @@
     <Compile Include="Pack\FilePackService.cs" />
     <Compile Include="Pack\ZipPackage.cs" />
     <Compile Include="Pack\LazyPackageEntry.cs" />
+    <Compile Include="Rest\Controllers\RadarController.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
     <Compile Include="Rest\Controllers\ClerkController.cs" />
     <Compile Include="Rest\Responses\GenericResponse.cs" />
+    <Compile Include="Schedule\FusionProcess.cs" />
+    <Compile Include="Schedule\FusionProcessState.cs" />
+    <Compile Include="Schedule\IFusionProcess.cs" />
+    <Compile Include="Schedule\IFusionProcessFactory.cs" />
     <Compile Include="Schedule\IScheduleService.cs" />
     <Compile Include="Schedule\ScheduleService.cs" />
     <Compile Include="Server\IZappServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sync\ISyncService.cs" />
     <Compile Include="Sync\RedisSyncService.cs" />
-    <Compile Include="Utils\Guard.cs" />
     <Compile Include="ZappModule.cs" />
     <Compile Include="Server\ZappServer.cs" />
   </ItemGroup>
@@ -207,6 +212,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Zapp.Core\Zapp.Core.csproj">
+      <Project>{83d2dc0d-1ca2-4d25-a4e5-e9d96e5a66ab}</Project>
+      <Name>Zapp.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Zapp.Process\Zapp.Process.csproj">
       <Project>{0696f6e1-39d9-406a-a800-efae7422aff4}</Project>
       <Name>Zapp.Process</Name>

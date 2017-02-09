@@ -51,6 +51,9 @@ namespace Zapp
             Bind<IFusionFactory>().ToFactory();
 
             Bind<IFusionExtracter>().To<FileFusionExtractor>().InSingletonScope();
+
+            Bind<IFusionProcess>().To<FusionProcess>();
+            Bind<IFusionProcessFactory>().ToFactory();
         }
     }
 }

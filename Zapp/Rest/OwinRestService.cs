@@ -27,7 +27,7 @@ namespace Zapp.Rest
         /// <summary>
         /// Initializes a new <see cref="OwinRestService"/>.
         /// </summary>
-        /// <param name="kernel">Ninject</param>
+        /// <param name="kernel">Ninject kernel instance.</param>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Configuration storage instance.</param>
         public OwinRestService(

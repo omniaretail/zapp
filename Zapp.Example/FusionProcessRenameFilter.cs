@@ -18,7 +18,7 @@ namespace Zapp.Example
 
             if (metaEntry != null)
             {
-                metaEntry.SetInfo("entry.file", config.Id);
+                metaEntry.SetInfo(FusionMetaEntry.ExecutableInfoKey, config.Id);
             }
         }
     }

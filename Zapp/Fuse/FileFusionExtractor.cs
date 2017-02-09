@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using Zapp.Config;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Fuse
 {

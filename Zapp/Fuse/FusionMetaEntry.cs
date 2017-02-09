@@ -3,8 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Zapp.Core;
+using Zapp.Core.Clauses;
 using Zapp.Pack;
-using Zapp.Utils;
 
 namespace Zapp.Fuse
 {
@@ -13,7 +14,10 @@ namespace Zapp.Fuse
     /// </summary>
     public class FusionMetaEntry : IPackageEntry
     {
-        private const string entryName = "fusion-meta.json";
+        /// <summary>
+        /// Represents the key of the executable info.
+        /// </summary>
+        public const string ExecutableInfoKey = "executable.file.name";
 
         private IDictionary<string, string> info;
 
@@ -23,7 +27,7 @@ namespace Zapp.Fuse
         /// <inheritdoc />
         public string Name
         {
-            get { return entryName; }
+            get { return ZappVariables.FusionMetaEntyName; }
             set { throw new NotSupportedException("Not allowed to rename this entry."); }
         }
 
@@ -34,7 +38,7 @@ namespace Zapp.Fuse
         {
             info = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            SetInfo("entry.file", FusionProcessEntry.DefaultEntryName);
+            SetInfo(ExecutableInfoKey, FusionProcessEntry.DefaultEntryName);
         }
 
         /// <summary>

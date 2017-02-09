@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using Zapp.Config;
 using Zapp.Sync;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Pack
 {

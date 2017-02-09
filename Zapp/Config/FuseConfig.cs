@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Config
 {

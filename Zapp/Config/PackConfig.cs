@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using Zapp.Pack;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Config
 {

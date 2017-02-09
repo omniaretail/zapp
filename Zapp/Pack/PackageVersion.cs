@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Pack
 {

@@ -7,7 +7,8 @@ using System.Linq;
 using Zapp.Config;
 using Zapp.Pack;
 using Zapp.Sync;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
+using Zapp.Process;
 
 namespace Zapp.Fuse
 {
@@ -115,12 +116,7 @@ namespace Zapp.Fuse
                         .Select(v => packService.LoadPackage(v))
                         .ToList();
 
-                    var entries = GetEntriesForPackages(packages)
-                        .Concat(new IPackageEntry[] {
-                            new FusionMetaEntry(),
-                            new FusionProcessEntry()
-                        })
-                        .ToList();
+                    var entries = PrioritizeEntries(GetDefaultEntries(), packages);
 
                     foreach (var entry in entries)
                     {
@@ -148,7 +144,7 @@ namespace Zapp.Fuse
         /// </summary>
         /// <param name="fusionIds">Identities of the fusion.</param>
         /// <inheritdoc />
-        public bool TryExtractFusionBatch(IReadOnlyCollection<string> fusionIds) => 
+        public bool TryExtractFusionBatch(IReadOnlyCollection<string> fusionIds) =>
             fusionIds.All(f => TryExtractFusion(f)) == true;
 
         /// <summary>
@@ -209,14 +205,36 @@ namespace Zapp.Fuse
             fusion.AddEntry(entry);
         }
 
-        private IReadOnlyCollection<IPackageEntry> GetEntriesForPackages(IReadOnlyCollection<IPackage> packages)
+        private IReadOnlyCollection<IPackageEntry> PrioritizeEntries(
+            IReadOnlyCollection<IPackageEntry> standardEntries,
+            IReadOnlyCollection<IPackage> packages)
         {
-            return packages
+            return standardEntries.Concat(packages
                 .SelectMany(p => p.GetEntries())
-                .Where(e => entryFilter.IsMatch(e.Name))
+                .Where(e => entryFilter.IsMatch(e.Name)))
                 .GroupBy(e => e.Name)
                 .Select(e => e.FirstOrDefault())
                 .ToList();
         }
+
+        private IReadOnlyCollection<IPackageEntry> GetDefaultEntries()
+        {
+            var processReferencedLibs = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
+                .Select(f => new FileInfo(f))
+                .Where(i => !i.Name.Equals("Zapp.dll"))
+                .Select(f => new LazyPackageEntry(f.Name, new LazyStream(() => f.OpenRead())))
+                .ToList();
+
+            return processReferencedLibs
+                .Concat(new IPackageEntry[]
+                {
+                    new FusionMetaEntry(),
+                    new FusionProcessEntry()
+                })
+                .ToList();
+        }
+
+        private string GetReferencePath(string fileName) => Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, fileName);
     }
 }

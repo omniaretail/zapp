@@ -3,7 +3,7 @@ using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Schedule;
 using Zapp.Sync;
-using Zapp.Utils;
+using Zapp.Core.Clauses;
 
 namespace Zapp.Deploy
 {

@@ -17,5 +17,12 @@ namespace Zapp.Schedule
         /// Schedules all the configured fusions.
         /// </summary>
         void ScheduleAll();
+
+        /// <summary>
+        /// Announces a running app on which rest port it's bound.
+        /// </summary>
+        /// <param name="fusionId">Identity of the fusion.</param>
+        /// <param name="port">Port of the fusions' rest service.</param>
+        bool TryAnnounce(string fusionId, int port);
     }
 }
