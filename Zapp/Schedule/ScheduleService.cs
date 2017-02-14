@@ -26,6 +26,12 @@ namespace Zapp.Schedule
 
         private IDictionary<string, IFusionProcess> processes;
 
+        /// <summary>
+        /// Represents the current running processes.
+        /// </summary>
+        /// <inheritdoc />
+        public IReadOnlyCollection<IFusionProcess> Processes => processes?.Values?.ToList();
+
         private static readonly object syncLock = new object();
 
         /// <summary>
@@ -101,6 +107,20 @@ namespace Zapp.Schedule
                         foreach (string fusionId in fusionIds)
                         {
                             Schedule(fusionId);
+                        }
+
+                        foreach (var drainer in drainers)
+                        {
+                            try
+                            {
+                                drainer.Resume();
+
+                                logService.Info($"Drainer: resume {drainer.GetType().Name} finished.");
+                            }
+                            catch (Exception ex)
+                            {
+                                logService.Error("Failed to run drainer for event Resume", ex);
+                            }
                         }
                     }
                     else

@@ -8,6 +8,11 @@ namespace Zapp.Schedule
     public interface IScheduleService
     {
         /// <summary>
+        /// Represents the current running processes.
+        /// </summary>
+        IReadOnlyCollection<IFusionProcess> Processes { get; }
+
+        /// <summary>
         /// Schedules a collection of fusions
         /// </summary>
         /// <param name="fusionIds">Identities of the fusions.</param>

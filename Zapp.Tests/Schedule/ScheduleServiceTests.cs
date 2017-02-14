@@ -20,7 +20,7 @@ namespace Zapp.Schedule
             sut.Schedule(new[] { "test" });
 
             kernel.GetMock<ILog>()
-                .Verify(m => m.Info(It.IsAny<string>()), Times.Exactly(2));
+                .Verify(m => m.Info(It.IsAny<string>()), Times.Exactly(3));
         }
 
         [Test]
