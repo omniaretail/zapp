@@ -2,10 +2,12 @@
 using Ninject.Web.Common;
 using Ninject.Web.WebApi;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Zapp.Core;
+using Zapp.Process.Controller;
+using Zapp.Process.Meta;
 
 namespace Zapp.Process.Libraries
 {
@@ -15,18 +17,23 @@ namespace Zapp.Process.Libraries
     public class LibraryService : ILibraryService
     {
         private readonly IKernel kernel;
-        //private readonly IZappProcess zappProcess;
+        private readonly IMetaService metaService;
+        private readonly IProcessController processController;
 
         /// <summary>
         /// Initializes a new <see cref="LibraryService"/>.
         /// </summary>
         /// <param name="kernel">Ninject kernel instance.</param>
-        /// <param name="zappProcess">The process instance used to stop the app.</param>
+        /// <param name="metaService">Service used for receiving meta info.</param>
+        /// <param name="processController">Controller for process' lifetime.</param>
         public LibraryService(
-            IKernel kernel)
+            IKernel kernel,
+            IMetaService metaService,
+            IProcessController processController)
         {
             this.kernel = kernel;
-            //this.zappProcess = zappProcess;
+            this.metaService = metaService;
+            this.processController = processController;
         }
 
         /// <summary>
@@ -35,8 +42,9 @@ namespace Zapp.Process.Libraries
         /// <inheritdoc />
         public void LoadAll()
         {
-            var libraries = Directory.GetFiles(
-                AppDomain.CurrentDomain.BaseDirectory, "*.dll");
+            var libraries = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.*")
+                .Where(e => e.EndsWith(".dll") || e.EndsWith(".exe"))
+                .ToList();
 
             AppDomain.CurrentDomain.AssemblyResolve += ResolveAssembly;
 
@@ -55,7 +63,17 @@ namespace Zapp.Process.Libraries
         /// Runs the defined startup assembly.
         /// </summary>
         /// <inheritdoc />
-        public void RunStartup() { }
+        public void RunStartup()
+        {
+            var assembly = default(Assembly);
+            var assemblySearch = metaService
+                .GetValue(ZappVariables.StartupAssemblyNameFusionInfoKey);
+
+            if (TryFindAssembly(assemblySearch, out assembly))
+            {
+                assembly?.EntryPoint?.Invoke(null, new object[] { new string[0] });
+            }
+        }
 
         /// <summary>
         /// Runs the defined teardown method.
@@ -63,9 +81,47 @@ namespace Zapp.Process.Libraries
         /// <inheritdoc />
         public void RunTeardown()
         {
-            // do it !
+            var assembly = default(Assembly);
+            var assemblySearch = metaService
+                .GetValue(ZappVariables.TeardownAssemblyNameFusionInfoKey);
 
-            Environment.Exit(0);
+            var type = default(Type);
+            var typeSearch = metaService
+                .GetValue(ZappVariables.TeardownTypeNameFusionInfoKey);
+
+            var method = default(MethodInfo);
+            var methodSearch = metaService
+                .GetValue(ZappVariables.TeardownMethodNameFusionInfoKey);
+
+            if (TryFindAssembly(assemblySearch, out assembly) &&
+                TryFindType(typeSearch, assembly, out type) &&
+                TryFindMethod(methodSearch, type, out method))
+            {
+                method?.Invoke(null, new object[0]);
+            }
+
+            processController.Cancel();
+        }
+
+        private bool TryFindAssembly(string name, out Assembly assembly)
+        {
+            return (assembly = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .SingleOrDefault(a => string.Equals(a.GetName().Name, name, StringComparison.OrdinalIgnoreCase))) != null;
+        }
+
+        private bool TryFindType(string name, Assembly assembly, out Type type)
+        {
+            return (type = assembly
+                .GetTypes()
+                .SingleOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))) != null;
+        }
+
+        private bool TryFindMethod(string name, Type type, out MethodInfo method)
+        {
+            return (method = type
+                .GetMethods()
+                .SingleOrDefault(t => string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase))) != null;
         }
 
         private static Assembly ResolveAssembly(object sender, ResolveEventArgs args)

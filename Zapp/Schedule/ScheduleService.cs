@@ -3,9 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Zapp.Config;
-using Zapp.Fuse;
 using Zapp.Core.Clauses;
-using System.Net;
+using Zapp.Fuse;
 
 namespace Zapp.Schedule
 {
@@ -22,6 +21,9 @@ namespace Zapp.Schedule
 
         private readonly IFusionProcessFactory fusionProcessFactory;
 
+        private readonly IEnumerable<IFusionProcessDrainer> drainers;
+        private readonly IReadOnlyCollection<IFusionProcessInterceptor> interceptors;
+
         private IDictionary<string, IFusionProcess> processes;
 
         private static readonly object syncLock = new object();
@@ -33,17 +35,24 @@ namespace Zapp.Schedule
         /// <param name="configStore">Store used for loading configuration.</param>
         /// <param name="fusionService">Service used for resolving fusion extractions.</param>
         /// <param name="fusionProcessFactory">Factory used for creating <see cref="IFusionProcess"/> instances.</param>
+        /// <param name="drainers">Collection of drainers that needs to determine if a <see cref="IFusionProcess"/> is ready for teardown.</param>
+        /// <param name="interceptors">Collection of interceptors thats needs to be fired on certain events.</param>
         public ScheduleService(
             ILog logService,
             IConfigStore configStore,
             IFusionService fusionService,
-            IFusionProcessFactory fusionProcessFactory)
+            IFusionProcessFactory fusionProcessFactory,
+            IEnumerable<IFusionProcessDrainer> drainers,
+            IEnumerable<IFusionProcessInterceptor> interceptors)
         {
             this.logService = logService;
             this.configStore = configStore;
             this.fusionService = fusionService;
 
             this.fusionProcessFactory = fusionProcessFactory;
+
+            this.drainers = drainers.ToList();
+            this.interceptors = interceptors.ToList();
 
             processes = new SortedDictionary<string, IFusionProcess>(
                 StringComparer.OrdinalIgnoreCase);
@@ -53,9 +62,11 @@ namespace Zapp.Schedule
         /// Schedules a collection of fusions
         /// </summary>
         /// <param name="fusionIds">Identities of the fusions.</param>
+        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
         /// <exception cref="ArgumentNullException">Throw when <paramref name="fusionIds"/> is not set.</exception>
+        /// <exception cref="ArgumentException">Throw when one of the <paramref name="fusionIds"/> is not set.</exception>
         /// <inheritdoc />
-        public void Schedule(IReadOnlyCollection<string> fusionIds)
+        public void Schedule(IReadOnlyCollection<string> fusionIds, bool isExtractionRequired = true)
         {
             Guard.ParamNotNull(fusionIds, nameof(fusionIds));
 
@@ -74,7 +85,7 @@ namespace Zapp.Schedule
                     {
                         logService.Info("Global extraction completed, scheduling all fusions.");
 
-                        ScheduleAll();
+                        ScheduleAll(isExtractionRequired: false);
                     }
                     else
                     {
@@ -83,11 +94,18 @@ namespace Zapp.Schedule
                 }
                 else
                 {
-                    WaitForDrainPermission();
+                    DrainAndStop(fusionIds);
 
-                    foreach (string fusionId in fusionIds)
+                    if (!isExtractionRequired || fusionService.TryExtractFusionBatch(fusionIds))
                     {
-                        Schedule(fusionId);
+                        foreach (string fusionId in fusionIds)
+                        {
+                            Schedule(fusionId);
+                        }
+                    }
+                    else
+                    {
+                        logService.Fatal("Failed to extraction fusion batch.");
                     }
                 }
             }
@@ -96,14 +114,15 @@ namespace Zapp.Schedule
         /// <summary>
         /// Schedules all the configured fusions.
         /// </summary>
+        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
         /// <inheritdoc />
-        public void ScheduleAll()
+        public void ScheduleAll(bool isExtractionRequired = true)
         {
             var fusionIds = configStore.Value?.Fuse?.Fusions?
                 .Select(f => f.Id)?
                 .ToList() ?? new List<string>();
 
-            Schedule(fusionIds);
+            Schedule(fusionIds, isExtractionRequired);
         }
 
         /// <summary>
@@ -111,11 +130,11 @@ namespace Zapp.Schedule
         /// </summary>
         /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="port">Port of the fusions' rest service.</param>
+        /// <exception cref="ArgumentException">Throw when <paramref name="fusionId"/> is not set.</exception>
         /// <inheritdoc />
         public bool TryAnnounce(string fusionId, int port)
         {
             Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
-            Guard.ParamNotOutOfRange(port, IPEndPoint.MinPort, IPEndPoint.MaxPort, nameof(port));
 
             var process = default(IFusionProcess);
 
@@ -124,42 +143,136 @@ namespace Zapp.Schedule
                 return false;
             }
 
-            return process.TryRequestStart(port);
-        }
-
-        private void WaitForDrainPermission() { }
-
-        private void Schedule(string fusionId)
-        {
-            var currentProcess = default(IFusionProcess);
-
-            if (TryGetProcess(fusionId, out currentProcess))
+            if (!process.TryRequestStart(port))
             {
-                if (currentProcess.TryRequestStop() &&
-                    processes.Remove(fusionId))
+                logService.Error($"Failed to start process for fusion: {fusionId}, no interceptors informed.");
+                return false;
+            }
+
+            foreach (var interceptor in interceptors)
+            {
+                try
                 {
-                    (currentProcess as IDisposable).Dispose();
-                    currentProcess = null;
+                    interceptor.OnStartupCalled(process);
+
+                    logService.Info($"Interceptor: {interceptor.GetType().Name} finished.");
+                }
+                catch (Exception ex)
+                {
+                    logService.Error("Failed to run interceptor for event OnStartupCalled", ex);
                 }
             }
 
-            currentProcess = fusionProcessFactory.CreateNew(fusionId);
+            return true;
+        }
 
-            if (currentProcess.TrySpawn())
+        private void Schedule(string fusionId)
+        {
+            StopProcess(fusionId);
+            StartProcess(fusionId);
+        }
+
+        private void StartProcess(string fusionId)
+        {
+            var process = fusionProcessFactory.CreateNew(fusionId);
+
+            if (!process.TrySpawn())
             {
-                processes.Add(fusionId, currentProcess);
+                logService.Error($"Failed to spawn process for fusion: {fusionId}, added anyway.");
+            }
+
+            processes.Add(fusionId, process);
+        }
+
+        private void StopProcess(string fusionId)
+        {
+            var process = default(IFusionProcess);
+
+            if (!TryGetProcess(fusionId, out process))
+            {
+                return;
+            }
+
+            if (!process.TryRequestStop())
+            {
+                logService.Error($"Failed to stop process for fusion: {fusionId}, removed/disposed anyway.");
+            }
+
+            processes.Remove(fusionId);
+
+            (process as IDisposable).Dispose();
+        }
+
+        private void DrainAndStop(IReadOnlyCollection<string> fusionIds)
+        {
+            var processes = GetProcesses(fusionIds).ToList();
+
+            if (processes.Any())
+            {
+                foreach (var drainer in drainers)
+                {
+                    try
+                    {
+                        drainer.Drain(processes);
+
+                        logService.Info($"Drainer: {drainer.GetType().Name} finished.");
+                    }
+                    catch (Exception ex)
+                    {
+                        logService.Error("Failed to run drainer.", ex);
+                    }
+                }
+            }
+
+            foreach (string fusionId in fusionIds)
+            {
+                StopProcess(fusionId);
             }
         }
 
-        private bool TryGetProcess(string fusionId, out IFusionProcess process) =>
-            processes.TryGetValue(fusionId, out process);
+        private void StopProcesses()
+        {
+            lock (syncLock)
+            {
+                var fusionIds = processes?.Keys?.ToList();
+
+                DrainAndStop(fusionIds);
+            }
+        }
+
+        private bool TryGetProcess(string fusionId, out IFusionProcess process)
+        {
+            process = default(IFusionProcess);
+
+            return processes?.TryGetValue(fusionId, out process) == true;
+        }
+
+        private IEnumerable<IFusionProcess> GetProcesses(IReadOnlyCollection<string> fusionIds)
+        {
+            var current = default(IFusionProcess);
+
+            foreach (string fusionId in fusionIds)
+            {
+                if (TryGetProcess(fusionId, out current))
+                {
+                    yield return current;
+                }
+            }
+        }
 
         /// <summary>
         /// Releases all resources used by the <see cref="ScheduleService"/> instance.
         /// </summary>
         public void Dispose()
         {
-            // processes: drain them!
+            try
+            {
+                StopProcesses();
+            }
+            catch (Exception ex)
+            {
+                logService?.Fatal("Failed to drain all processes", ex);
+            }
 
             processes?.Clear();
             processes = null;

@@ -2,11 +2,14 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using Zapp.Config;
 using Zapp.Core;
 using Zapp.Core.Clauses;
+using Zapp.Core.Http;
 using Zapp.Fuse;
 using WinProcess = System.Diagnostics.Process;
 
@@ -17,20 +20,49 @@ namespace Zapp.Schedule
     /// </summary>
     public class FusionProcess : IFusionProcess, IDisposable
     {
+        private static readonly TimeSpan defaultProcessTimeout = TimeSpan.FromSeconds(20);
+
+        private const string startupAction = "api/lifetime/startup";
+        private const string teardownAction = "api/lifetime/teardown";
+
         private readonly string fusionId;
 
         private readonly ILog logService;
         private readonly IConfigStore configStore;
 
-        private HttpClient client;
         private WinProcess process;
-        private FusionProcessState state;
+        private IDictionary<string, string> metaInfo;
+
+        private int? processPort;
+
+        private PerformanceCounter cpuCounter;
+        private PerformanceCounter memoryCounter;
+
+        private bool isAutoRestartEnabled = true;
 
         /// <summary>
-        /// Represents the state of the process.
+        /// Represents the identity of the fusion.
         /// </summary>
         /// <inheritdoc />
-        public FusionProcessState State => state;
+        public string FusionId => fusionId;
+
+        /// <summary>
+        /// Represents a custom session implemention.
+        /// </summary>
+        /// <inheritdoc />
+        public object Session { get; set; }
+
+        /// <summary>
+        /// Peformance counter for cpu.
+        /// </summary>
+        /// <inheritdoc />
+        public PerformanceCounter CpuCounter => cpuCounter;
+
+        /// <summary>
+        /// Peformance counter for memory.
+        /// </summary>
+        /// <inheritdoc />
+        public PerformanceCounter MemoryCounter => memoryCounter;
 
         /// <summary>
         /// Initializes a new <see cref="FusionProcess"/>.
@@ -49,9 +81,9 @@ namespace Zapp.Schedule
             this.logService = logService;
             this.configStore = configStore;
 
-            client = new HttpClient();
             process = new WinProcess();
-            state = FusionProcessState.Instantiated;
+            cpuCounter = new PerformanceCounter("Process", "% Processor Time");
+            memoryCounter = new PerformanceCounter("Process", "Working Set - Private");
         }
 
         /// <summary>
@@ -60,40 +92,45 @@ namespace Zapp.Schedule
         /// <inheritdoc />
         public bool TrySpawn()
         {
-            if (state != FusionProcessState.Instantiated) return false;
+            if (string.IsNullOrEmpty(process?.StartInfo?.FileName))
+            {
+                var fusionDir = configStore.Value?.Fuse?
+                    .GetActualFusionDirectory(fusionId);
 
-            var fusionDir = configStore.Value?.Fuse?
-                .GetActualFusionDirectory(fusionId);
+                metaInfo = LoadMetaInfo(fusionDir);
 
-            // todo: move this logic to wrapper class -> read / write.
-            var fusionMetaFile = Path.Combine(fusionDir, ZappVariables.FusionMetaEntyName);
-            var fusionMetaFileContent = File.ReadAllText(fusionMetaFile);
+                var executableName = Path.Combine(fusionDir, metaInfo[FusionMetaEntry.ExecutableInfoKey]);
 
-            var fusionMetaInfo = JsonConvert.DeserializeObject<Dictionary<string, string>>(fusionMetaFileContent);
+                process.StartInfo.Verb = "runas";
+                process.StartInfo.FileName = executableName;
+                process.StartInfo.RedirectStandardOutput = false;
+                process.StartInfo.RedirectStandardError = false;
 
-            var fusionExecutableFile = Path.Combine(fusionDir, fusionMetaInfo[FusionMetaEntry.ExecutableInfoKey]);
+                var parentId = WinProcess.GetCurrentProcess().Id;
+                var parentPort = configStore.Value?.Rest?.Port;
 
-            process.StartInfo.Verb = "runas";
-            process.StartInfo.FileName = fusionExecutableFile;
-            process.StartInfo.RedirectStandardOutput = false;
-            process.StartInfo.RedirectStandardError = false;
+                process.StartInfo.EnvironmentVariables.Add(ZappVariables.FusionIdEnvKey, fusionId);
+                process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentProcessIdEnvKey, Convert.ToString(parentId));
+                process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentPortEnvKey, Convert.ToString(parentPort));
 
-            var parentId = WinProcess.GetCurrentProcess().Id;
-            var parentPort = configStore.Value?.Rest?.Port;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
 
-            process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentProcessIdEnvKey, Convert.ToString(parentId));
-            process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentPortEnvKey, Convert.ToString(parentPort));
+                process.EnableRaisingEvents = true;
+                process.Exited += (s, e) => OnExited();
+            }
 
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
+            bool isSpawned = process?.Start() == true;
 
-            process.EnableRaisingEvents = true;
-            process.Exited += (s, e) => logService.Warn($"Process: {fusionId} exited.");
+            LogEvent("spawn", isSuccess: isSpawned);
 
-            state = FusionProcessState.Spawned;
-            logService.Info($"Process: {fusionId} spawned.");
+            if (isSpawned)
+            {
+                cpuCounter.InstanceName = process.ProcessName;
+                memoryCounter.InstanceName = process.ProcessName;
+            }
 
-            return process.Start();
+            return isSpawned;
         }
 
         /// <summary>
@@ -103,13 +140,16 @@ namespace Zapp.Schedule
         /// <inheritdoc />
         public bool TryRequestStart(int port)
         {
-            if (state != FusionProcessState.Spawned) return false;
+            processPort = port;
 
-            client.BaseAddress = new Uri($"http://localhost:{port}/");
+            using (var client = new HttpClient().AsLocalhost(processPort))
+            {
+                var isTeardownExecuted = client.ExpectOk(startupAction);
 
-            state = FusionProcessState.Running;
-            logService.Info($"Process: {fusionId} started on port {port}.");
-            return true;
+                LogEvent("startup", message: $"Port: {processPort}", isSuccess: isTeardownExecuted);
+
+                return isTeardownExecuted;
+            }
         }
 
         /// <summary>
@@ -118,11 +158,57 @@ namespace Zapp.Schedule
         /// <inheritdoc />
         public bool TryRequestStop()
         {
-            if (state != FusionProcessState.Running) return false;
+            isAutoRestartEnabled = false;
 
-            state = FusionProcessState.Stopping;
-            logService.Warn($"Process: {fusionId} stopped.");
-            return true;
+            // todo: de-duplicate this code
+            using (var client = new HttpClient().AsLocalhost(processPort))
+            {
+                var isTeardownExecuted = client.ExpectOk(teardownAction);
+
+                LogEvent("teardown", isSuccess: isTeardownExecuted);
+
+                return isTeardownExecuted;
+            }
+        }
+
+        private void OnExited()
+        {
+            LogEvent("exited");
+
+            if (isAutoRestartEnabled)
+            {
+                bool isRespawned = TrySpawn();
+
+                LogEvent("spawn-restart", isSuccess: isRespawned);
+            }
+        }
+
+        private IDictionary<string, string> LoadMetaInfo(string fusionDir)
+        {
+            var metaContent = File.ReadAllText(Path.Combine(fusionDir, ZappVariables.FusionMetaEntyName));
+
+            return JsonConvert.DeserializeObject<Dictionary<string, string>>(metaContent);
+        }
+
+        private void LogEvent(string eventName, string message = null, bool? isSuccess = false)
+        {
+            var text = $"Process: {fusionId} Event: {eventName} Message: {message ?? "not provided"}";
+
+            if (isSuccess.HasValue)
+            {
+                if (isSuccess.Value == true)
+                {
+                    logService.Info(text);
+                }
+                else
+                {
+                    logService.Error(text);
+                }
+            }
+            else
+            {
+                logService.Info(text);
+            }
         }
 
         /// <summary>
@@ -130,8 +216,28 @@ namespace Zapp.Schedule
         /// </summary>
         public void Dispose()
         {
-            client?.Dispose();
-            client = null;
+            isAutoRestartEnabled = false;
+
+            if (process?.HasExited == false)
+            {
+                try
+                {
+                    process?.Kill();
+                }
+                catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException) { }
+
+                try
+                {
+                    process?.WaitForExit((int)defaultProcessTimeout.TotalMilliseconds);
+                }
+                catch (Exception ex) when (ex is Win32Exception || ex is SystemException) { }
+            }
+
+            cpuCounter?.Dispose();
+            cpuCounter = null;
+
+            memoryCounter?.Dispose();
+            memoryCounter = null;
 
             process?.Dispose();
             process = null;

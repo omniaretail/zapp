@@ -2,6 +2,7 @@
 using Zapp.Process.Client;
 using Zapp.Process.Controller;
 using Zapp.Process.Libraries;
+using Zapp.Process.Meta;
 using Zapp.Process.Rest;
 
 namespace Zapp.Process
@@ -26,6 +27,7 @@ namespace Zapp.Process
 
             Bind<ILibraryService>().To<LibraryService>().InSingletonScope();
             Bind<IRestService>().To<OwinRestService>().InSingletonScope();
+            Bind<IMetaService>().To<StandardMetaService>().InSingletonScope();
         }
     }
 }

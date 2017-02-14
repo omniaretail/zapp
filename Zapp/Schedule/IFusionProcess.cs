@@ -1,4 +1,6 @@
-﻿namespace Zapp.Schedule
+﻿using System.Diagnostics;
+
+namespace Zapp.Schedule
 {
     /// <summary>
     /// Represents an interface mainly used for communication with the fusion process.
@@ -6,9 +8,24 @@
     public interface IFusionProcess
     {
         /// <summary>
-        /// Represents the state of the process.
+        /// Represents the identity of the fusion.
         /// </summary>
-        FusionProcessState State { get; }
+        string FusionId { get; }
+
+        /// <summary>
+        /// Represents a custom session implemention.
+        /// </summary>
+        object Session { get; set; }
+
+        /// <summary>
+        /// Peformance counter for cpu.
+        /// </summary>
+        PerformanceCounter CpuCounter { get; }
+
+        /// <summary>
+        /// Peformance counter for memory.
+        /// </summary>
+        PerformanceCounter MemoryCounter { get; }
 
         /// <summary>
         /// Tries to spawn an instance of the process.

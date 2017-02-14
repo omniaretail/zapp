@@ -8,7 +8,9 @@ using System;
 using System.Net;
 using System.Net.Http.Formatting;
 using System.Web.Http;
+using System.Web.Http.Dispatcher;
 using Zapp.Core.Clauses;
+using Zapp.Core.Owin;
 
 namespace Zapp.Process.Rest
 {
@@ -46,6 +48,8 @@ namespace Zapp.Process.Rest
         private void Startup(IAppBuilder app)
         {
             var config = new HttpConfiguration();
+
+            config.Services.Replace(typeof(IAssembliesResolver), new StandardAssembliesResolver());
 
             config.MapHttpAttributeRoutes();
 

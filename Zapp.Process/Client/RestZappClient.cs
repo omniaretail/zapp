@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Net.Http;
 using Zapp.Core;
+using Zapp.Core.Http;
+using Zapp.Process.Controller;
 
 namespace Zapp.Process.Client
 {
@@ -11,18 +13,22 @@ namespace Zapp.Process.Client
     {
         private HttpClient client;
 
+        private readonly IProcessController processController;
+
         /// <summary>
         /// Initializes a new <see cref="RestZappClient"/>.
         /// </summary>
-        public RestZappClient()
+        /// <param name="processController">Controller used for process' lifetime.</param>
+        public RestZappClient(
+            IProcessController processController)
         {
-            var rawParentPort = Environment.GetEnvironmentVariable(
-                ZappVariables.ParentPortEnvKey,
-                EnvironmentVariableTarget.Process
-            );
+            this.processController = processController;
+
+            var parentPort = processController.GetVariable<string>(
+                ZappVariables.ParentPortEnvKey);
 
             client = new HttpClient();
-            client.BaseAddress = new Uri($"http://localhost:{rawParentPort}");
+            client.BaseAddress = new Uri($"http://localhost:{parentPort}");
         }
 
         /// <summary>
@@ -32,9 +38,9 @@ namespace Zapp.Process.Client
         /// <inheritdoc />
         public void Announce(int port)
         {
-            var fusionId = AppDomain.CurrentDomain.FriendlyName;
+            var fusionId = processController.GetVariable<string>("fusion.id");
 
-            var response = client.GetAsync($"api/radar/announce/{fusionId}/{port}");
+            client.ExpectOk($"api/radar/announce/{fusionId}/{port}");
         }
 
         /// <summary>

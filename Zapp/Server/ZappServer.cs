@@ -1,6 +1,5 @@
 ﻿using log4net;
 using System;
-using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Rest;
 using Zapp.Schedule;
@@ -46,6 +45,7 @@ namespace Zapp.Server
         /// <summary>
         /// Starts the current instance of <see cref="ZappServer"/> and it's dependencies.
         /// </summary>
+        /// <inheritdoc />
         public void Start()
         {
             try

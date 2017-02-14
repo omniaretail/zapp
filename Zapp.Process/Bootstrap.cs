@@ -1,6 +1,7 @@
 ﻿using Ninject;
 using System;
 using System.IO;
+using Zapp.Process.Controller;
 
 namespace Zapp.Process
 {
@@ -17,6 +18,7 @@ namespace Zapp.Process
         {
             var kernel = default(IKernel);
             var zappProcess = default(IZappProcess);
+            var processController = default(IProcessController);
 
             try
             {
@@ -27,6 +29,9 @@ namespace Zapp.Process
                 {
                     zappProcess = kernel.Get<IZappProcess>();
                     zappProcess.Start();
+
+                    processController = kernel.Get<IProcessController>();
+                    processController.WaitForCompletion();
                 }
             }
             catch (Exception ex)
@@ -42,6 +47,9 @@ namespace Zapp.Process
 
                 (zappProcess as IDisposable)?.Dispose();
                 zappProcess = null;
+
+                (processController as IDisposable)?.Dispose();
+                processController = null;
             }
         }
     }

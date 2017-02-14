@@ -11,12 +11,14 @@ namespace Zapp.Schedule
         /// Schedules a collection of fusions
         /// </summary>
         /// <param name="fusionIds">Identities of the fusions.</param>
-        void Schedule(IReadOnlyCollection<string> fusionIds);
+        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
+        void Schedule(IReadOnlyCollection<string> fusionIds, bool isExtractionRequired = true);
 
         /// <summary>
         /// Schedules all the configured fusions.
         /// </summary>
-        void ScheduleAll();
+        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
+        void ScheduleAll(bool isExtractionRequired = true);
 
         /// <summary>
         /// Announces a running app on which rest port it's bound.

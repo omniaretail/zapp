@@ -11,6 +11,11 @@
         public const string FusionMetaEntyName = "fusion-meta.json";
 
         /// <summary>
+        /// Represents the evironment key for the fusions id.
+        /// </summary>
+        public const string FusionIdEnvKey = "fusion.id";
+
+        /// <summary>
         /// Represents the environment key of parent process' id.
         /// </summary>
         public const string ParentProcessIdEnvKey = "parent.id";

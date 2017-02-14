@@ -29,7 +29,7 @@ namespace Zapp.Example
             using (var kernel = new StandardKernel(new ZappModule()))
             {
                 kernel.Bind<IFusionFilter>().To<FusionProcessRenameFilter>();
-                
+
                 var server = kernel.Get<IZappServer>();
                 server.Start();
 

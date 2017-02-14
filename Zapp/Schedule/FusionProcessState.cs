@@ -24,5 +24,10 @@
         /// Indicates that the process is stoping.
         /// </summary>
         Stopping = 3,
+
+        /// <summary>
+        /// Indicates that the process is exited.
+        /// </summary>
+        Exited = 4
     }
 }

@@ -16,7 +16,7 @@ If you have tightly coupled packages which are automatically deployed and needs 
 
 ## Prerequisites
 
-- [.NET 4.5.1](https://www.microsoft.com/nl-nl/download/details.aspx?id=40773)
+- [.NET 4.5.1](https://www.microsoft.com/nl-nl/download/details.aspx?id=40773) (x64)
 - Redis Server ([Windows](https://github.com/MSOpenTech/redis/releases) or [Linux](https://redis.io/download)) *(replaceable)*
 
 ## Installation

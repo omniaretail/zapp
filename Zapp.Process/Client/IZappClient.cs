@@ -6,7 +6,7 @@
     public interface IZappClient
     {
         /// <summary>
-        /// Announces the port to the zapp-service.
+        /// Tries to announce the port to the zapp-service.
         /// </summary>
         /// <param name="port">Port of the process' rest-api.</param>
         void Announce(int port);

@@ -6,9 +6,13 @@ using Ninject.Web.WebApi.OwinHost;
 using Owin;
 using Swashbuckle.Application;
 using System;
+using System.Collections.Generic;
 using System.Net.Http.Formatting;
+using System.Reflection;
 using System.Web.Http;
+using System.Web.Http.Dispatcher;
 using Zapp.Config;
+using Zapp.Core.Owin;
 
 namespace Zapp.Rest
 {
@@ -60,7 +64,7 @@ namespace Zapp.Rest
         {
             var config = new HttpConfiguration();
 
-            config.MapHttpAttributeRoutes();
+            config.Services.Replace(typeof(IAssembliesResolver), new StandardAssembliesResolver());
 
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
@@ -69,7 +73,10 @@ namespace Zapp.Rest
                 .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
                 .EnableSwaggerUi();
 
-            app.UseNinjectMiddleware(() => kernel).UseNinjectWebApi(config);
+            app.UseNinjectMiddleware(() => kernel)
+                .UseNinjectWebApi(config);
+
+            config.MapHttpAttributeRoutes();
         }
 
         /// <summary>
@@ -79,6 +86,14 @@ namespace Zapp.Rest
         {
             owinInstance?.Dispose();
             owinInstance = null;
+        }
+    }
+
+    internal class MyAssembliesResolver : DefaultAssembliesResolver
+    {
+        public override ICollection<Assembly> GetAssemblies()
+        {
+            return new[] { typeof(ZappModule).Assembly };
         }
     }
 }

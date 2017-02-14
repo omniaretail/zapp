@@ -145,6 +145,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Zapp.Core\Zapp.Core.csproj">
+      <Project>{83d2dc0d-1ca2-4d25-a4e5-e9d96e5a66ab}</Project>
+      <Name>Zapp.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Zapp.Process\Zapp.Process.csproj">
       <Project>{0696f6e1-39d9-406a-a800-efae7422aff4}</Project>
       <Name>Zapp.Process</Name>

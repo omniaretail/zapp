@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Threading;
 using Zapp.Core;
-using Zapp.Core.Clauses;
+
 using WinProcess = System.Diagnostics.Process;
 
 namespace Zapp.Process.Controller
@@ -8,36 +9,62 @@ namespace Zapp.Process.Controller
     /// <summary>
     /// Represents a implementation of <see cref="IProcessController"/> with simple logics.
     /// </summary>
-    public class ProcessController : IProcessController
+    public class ProcessController : IProcessController, IDisposable
     {
-        /// <summary>
-        /// Represents an bindable event which will invoke when the parent process is exited.
-        /// </summary>
-        /// <inheritdoc />
-        public event EventHandler ParentProcessExited;
+        private ManualResetEvent resetEvent;
 
         /// <summary>
         /// Initializes a new <see cref="ProcessController"/>
         /// </summary>
         public ProcessController()
         {
-            var rawParentId = Environment.GetEnvironmentVariable(
-                ZappVariables.ParentProcessIdEnvKey,
-                EnvironmentVariableTarget.Process
-            );
-
-            var process = GetParentProcess(rawParentId);
-            process.EnableRaisingEvents = true;
-            process.Exited += (s, e) => Emit();
+            resetEvent = new ManualResetEvent(false);
         }
 
-        private WinProcess GetParentProcess(string rawParentId)
+        /// <summary>
+        /// Gets a variable which is defined for this process.
+        /// </summary>
+        /// <typeparam name="T">Type of the variable.</typeparam>
+        /// <param name="key">Key of the variable.</param>
+        /// <inheritdoc />
+        public T GetVariable<T>(string key)
         {
-            Guard.ParamNotNullOrEmpty(rawParentId, nameof(rawParentId));
+            string value = Environment
+                .GetEnvironmentVariable(key, EnvironmentVariableTarget.Process);
 
-            return WinProcess.GetProcessById(Convert.ToInt32(rawParentId));
+            return (T)Convert.ChangeType(value, typeof(T));
         }
 
-        private void Emit() => ParentProcessExited?.Invoke(this, new EventArgs());
+        /// <summary>
+        /// Waits for completion of the process.
+        /// </summary>
+        /// <inheritdoc />
+        public void WaitForCompletion()
+        {
+            var parentProcessId = GetVariable<int>(ZappVariables.ParentProcessIdEnvKey);
+
+            var process = WinProcess
+                .GetProcessById(parentProcessId);
+
+            process.EnableRaisingEvents = true;
+            process.Exited += (s, e) => Cancel();
+
+            resetEvent.WaitOne();
+        }
+
+        /// <summary>
+        /// Cancels the current <see cref="WaitForCompletion"/>.
+        /// </summary>
+        /// <inheritdoc />
+        public void Cancel() => resetEvent.Set();
+
+        /// <summary>
+        /// Release all used resources by the <see cref="ProcessController"/> instance.
+        /// </summary>
+        public void Dispose()
+        {
+            resetEvent?.Dispose();
+            resetEvent = null;
+        }
     }
 }

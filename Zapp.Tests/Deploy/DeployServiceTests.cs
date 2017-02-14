@@ -66,7 +66,7 @@ namespace Zapp.Deploy
             Assert.That(result, Is.EqualTo(AnnounceResult.Ok));
 
             kernel.GetMock<IScheduleService>()
-                .Verify(m => m.Schedule(It.IsAny<IReadOnlyCollection<string>>()), Times.Exactly(1));
+                .Verify(m => m.Schedule(It.IsAny<IReadOnlyCollection<string>>(), true), Times.Exactly(1));
         }
     }
 }

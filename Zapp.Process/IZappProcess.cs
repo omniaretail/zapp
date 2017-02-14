@@ -9,10 +9,5 @@
         /// Starts all the services for the process.
         /// </summary>
         void Start();
-
-        /// <summary>
-        /// Stops the application from living.
-        /// </summary>
-        void Stop();
     }
 }

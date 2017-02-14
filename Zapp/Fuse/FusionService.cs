@@ -4,11 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Zapp.Config;
-using Zapp.Pack;
-using Zapp.Sync;
 using Zapp.Core.Clauses;
+using Zapp.Pack;
 using Zapp.Process;
+using Zapp.Sync;
+using NuGetPackageReferenceFile = NuGet.PackageReferenceFile;
+using NuGetPackageReference = NuGet.PackageReference;
 
 namespace Zapp.Fuse
 {
@@ -30,6 +33,8 @@ namespace Zapp.Fuse
         private readonly IFusionExtracter fusionExtractor;
 
         private readonly IReadOnlyCollection<IFusionFilter> fusionFilters;
+
+        private IReadOnlyCollection<FileInfo> defaultEntries;
 
         /// <summary>
         /// Initializes a new <see cref="FusionService"/>.
@@ -65,6 +70,7 @@ namespace Zapp.Fuse
             this.fusionFilters = fusionFilters.ToList();
 
             entryFilter = antFactory.CreateNew(configStore?.Value?.Fuse?.EntryPattern);
+            defaultEntries = GetDefaultEntries();
         }
 
         /// <summary>
@@ -116,7 +122,7 @@ namespace Zapp.Fuse
                         .Select(v => packService.LoadPackage(v))
                         .ToList();
 
-                    var entries = PrioritizeEntries(GetDefaultEntries(), packages);
+                    var entries = PrioritizeEntries(GenerateDefaultEntries(), packages);
 
                     foreach (var entry in entries)
                     {
@@ -217,15 +223,10 @@ namespace Zapp.Fuse
                 .ToList();
         }
 
-        private IReadOnlyCollection<IPackageEntry> GetDefaultEntries()
+        private IReadOnlyCollection<IPackageEntry> GenerateDefaultEntries()
         {
-            var processReferencedLibs = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
-                .Select(f => new FileInfo(f))
-                .Where(i => !i.Name.Equals("Zapp.dll"))
+            return defaultEntries
                 .Select(f => new LazyPackageEntry(f.Name, new LazyStream(() => f.OpenRead())))
-                .ToList();
-
-            return processReferencedLibs
                 .Concat(new IPackageEntry[]
                 {
                     new FusionMetaEntry(),
@@ -234,7 +235,58 @@ namespace Zapp.Fuse
                 .ToList();
         }
 
+        private IReadOnlyCollection<FileInfo> GetDefaultEntries()
+        {
+            var assembly = typeof(ZappProcessModule).Assembly;
+            var resourceName = "Zapp.Process.packages.config";
+
+            var resourceFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, resourceName);
+
+            try
+            {
+                using (var resourceStream = assembly.GetManifestResourceStream(resourceName))
+                using (var fileStream = File.OpenWrite(resourceFilePath))
+                {
+                    resourceStream.CopyTo(fileStream);
+                }
+
+                var references = new NuGetPackageReferenceFile(resourceFilePath)
+                    .GetPackageReferences()
+                    .Select(p => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{p.Id}.dll"))
+                    .Where(File.Exists)
+                    .SelectMany(e => GetAssemblyReferences(e).Concat(new[] { e }))
+                    .Concat(GetAssemblyReferences(assembly))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Where(File.Exists)
+                    .Select(e => new FileInfo(e).Name)
+                    .ToList();
+
+                return Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
+                    .Select(f => new FileInfo(f))
+                    .Where(i => references.Contains(i.Name, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+            }
+            finally
+            {
+                if (File.Exists(resourceFilePath))
+                {
+                    File.Delete(resourceFilePath);
+                }
+            }
+        }
+
         private string GetReferencePath(string fileName) => Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, fileName);
+
+        private IReadOnlyCollection<string> GetAssemblyReferences(string assemblyPath) =>
+            GetAssemblyReferences(Assembly.ReflectionOnlyLoadFrom(assemblyPath));
+
+        private IReadOnlyCollection<string> GetAssemblyReferences(Assembly assembly)
+        {
+            return assembly
+                .GetReferencedAssemblies()
+                .Select(p => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{p.Name}.dll"))
+                .ToList();
+        }
     }
 }

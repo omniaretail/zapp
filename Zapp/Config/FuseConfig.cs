@@ -21,7 +21,7 @@ namespace Zapp.Config
         /// Represents the pattern for packing entries.
         /// </summary>
         [JsonProperty("entryPattern")]
-        public string EntryPattern { get; set; } = "*.dll";
+        public string EntryPattern { get; set; } = "*.{dll,exe}";
 
         /// <summary>
         /// Represents the pattern for extracting fusions.
