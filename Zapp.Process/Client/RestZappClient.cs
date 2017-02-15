@@ -24,11 +24,10 @@ namespace Zapp.Process.Client
         {
             this.processController = processController;
 
-            var parentPort = processController.GetVariable<string>(
-                ZappVariables.ParentPortEnvKey);
+            var parentPort = Convert.ToInt32(processController.GetVariable<string>(
+                ZappVariables.ParentPortEnvKey));
 
-            client = new HttpClient();
-            client.BaseAddress = new Uri($"http://localhost:{parentPort}");
+            client = new HttpClient().AsLocalhost(parentPort);
         }
 
         /// <summary>

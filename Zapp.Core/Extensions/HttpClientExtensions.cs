@@ -40,7 +40,7 @@ namespace Zapp.Core.Http
         /// <param name="port">Port of the service.</param>
         public static HttpClient AsLocalhost(this HttpClient client, int? port)
         {
-            if (client.BaseAddress != null)
+            if (client.BaseAddress == null)
             {
                 client.BaseAddress = new Uri($"http://localhost:{port ?? 80}");
             }
