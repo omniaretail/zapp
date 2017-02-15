@@ -218,7 +218,7 @@ namespace Zapp.Fuse
             return standardEntries.Concat(packages
                 .SelectMany(p => p.GetEntries())
                 .Where(e => entryFilter.IsMatch(e.Name)))
-                .GroupBy(e => e.Name)
+                .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(e => e.FirstOrDefault())
                 .ToList();
         }
