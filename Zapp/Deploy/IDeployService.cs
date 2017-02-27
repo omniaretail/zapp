@@ -1,4 +1,5 @@
-﻿using Zapp.Pack;
+﻿using System.Collections.Generic;
+using Zapp.Pack;
 
 namespace Zapp.Deploy
 {
@@ -12,5 +13,11 @@ namespace Zapp.Deploy
         /// </summary>
         /// <param name="version">Version of the package.</param>
         AnnounceResult Announce(PackageVersion version);
+
+        /// <summary>
+        /// Announces a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        AnnounceResult Announce(IReadOnlyCollection<PackageVersion> versions);
     }
 }

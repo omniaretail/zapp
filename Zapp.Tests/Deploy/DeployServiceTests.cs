@@ -1,6 +1,7 @@
 ﻿using Moq;
 using NUnit.Framework;
 using System.Collections.Generic;
+using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Schedule;
 using Zapp.Sync;
@@ -58,6 +59,10 @@ namespace Zapp.Deploy
             kernel.GetMock<IPackService>()
                 .Setup(m => m.IsPackageVersionDeployed(version))
                 .Returns(true);
+
+            kernel.GetMock<IFusionService>()
+                .Setup(m => m.GetAffectedFusions(version.PackageId))
+                .Returns(new string[0]);
 
             var sut = GetSystemUnderTest();
 

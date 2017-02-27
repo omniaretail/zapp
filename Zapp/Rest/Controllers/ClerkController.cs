@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 using System.Web.Http;
 using System.Web.Http.Results;
 using Zapp.Deploy;
@@ -28,11 +29,23 @@ namespace Zapp.Rest.Controllers
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
-        [HttpGet, HttpPost, Route("api/clerk/announce/{packageId}/{deployVersion}")]
+        [HttpGet, Route("api/clerk/announce/{packageId}/{deployVersion}")]
         public StatusCodeResult Announce(string packageId, string deployVersion)
         {
-            var announceResult = deployService
-                .Announce(new PackageVersion(packageId, deployVersion));
+            return Announce(new[]
+            {
+                new PackageVersion(packageId, deployVersion)
+            });
+        }
+
+        /// <summary>
+        /// Announces a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        [HttpPost, Route("api/clerk/announce/")]
+        public StatusCodeResult Announce([FromBody]IReadOnlyCollection<PackageVersion> versions)
+        {
+            var announceResult = deployService.Announce(versions);
 
             switch (announceResult)
             {

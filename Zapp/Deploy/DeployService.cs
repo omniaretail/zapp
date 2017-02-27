@@ -4,6 +4,8 @@ using Zapp.Pack;
 using Zapp.Schedule;
 using Zapp.Sync;
 using Zapp.Core.Clauses;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Zapp.Deploy
 {
@@ -41,24 +43,35 @@ namespace Zapp.Deploy
         /// </summary>
         /// <param name="version">Version of the package.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="version"/> is not set.</exception>
-        public AnnounceResult Announce(PackageVersion version)
-        {
-            Guard.ParamNotNull(version, nameof(version));
+        /// <inheritdoc />
+        public AnnounceResult Announce(PackageVersion version) => Announce(new[] { version });
 
-            if (!syncService.Announce(version))
+        /// <summary>
+        /// Announces a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="versions"/> is not set.</exception>
+        /// <inheritdoc />
+        public AnnounceResult Announce(IReadOnlyCollection<PackageVersion> versions)
+        {
+            Guard.ParamNotNull(versions, nameof(versions));
+
+            if (!versions.All(syncService.Announce))
             {
                 return AnnounceResult.InternalError;
             }
 
-            if (!packService.IsPackageVersionDeployed(version))
+            if (!versions.All(packService.IsPackageVersionDeployed))
             {
                 return AnnounceResult.NotFound;
             }
 
-            var affectedFusions = fusionService
-                .GetAffectedFusions(version.PackageId);
+            var affections = versions
+                .SelectMany(v => fusionService.GetAffectedFusions(v.PackageId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            scheduleService.Schedule(affectedFusions);
+            scheduleService.Schedule(affections);
 
             return AnnounceResult.Ok;
         }

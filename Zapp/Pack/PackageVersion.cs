@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Diagnostics;
 using Zapp.Core.Clauses;
 
@@ -15,16 +16,19 @@ namespace Zapp.Pack
         /// <summary>
         /// Represents the identity of the package.
         /// </summary>
+        [JsonProperty("packageId")]
         public string PackageId { get; private set; }
 
         /// <summary>
         /// Represents the deploy version of the package.
         /// </summary>
+        [JsonProperty("deployVersion")]
         public string DeployVersion { get; private set; }
 
         /// <summary>
         /// Represents if the version is unknown.
         /// </summary>
+        [JsonIgnore]
         public bool IsUnknown => DeployVersion == unknownVersion;
 
         /// <summary>
@@ -33,6 +37,7 @@ namespace Zapp.Pack
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
         /// <exception cref="ArgumentException">Throw when either <paramref name="packageId"/>  is not set.</exception>
+        [JsonConstructor]
         public PackageVersion(string packageId, string deployVersion = unknownVersion)
         {
             Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
