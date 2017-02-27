@@ -8,6 +8,12 @@ namespace Zapp.Config
     public class RestConfig
     {
         /// <summary>
+        /// Represents the pattern to select ip-addresses.
+        /// </summary>
+        [JsonProperty("ipAddressPattern")]
+        public string IpAddressPattern { get; set; } = "*";
+
+        /// <summary>
         /// Represents the port for the rest-api.
         /// </summary>
         [JsonProperty("port")]

@@ -1,4 +1,6 @@
-﻿using log4net;
+﻿using AntPathMatching;
+using log4net;
+using Microsoft.Owin.Host.HttpListener;
 using Microsoft.Owin.Hosting;
 using Ninject;
 using Ninject.Web.Common.OwinHost;
@@ -7,8 +9,13 @@ using Owin;
 using Swashbuckle.Application;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Net.Http.Formatting;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Principal;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using Zapp.Config;
@@ -25,6 +32,7 @@ namespace Zapp.Rest
 
         private readonly ILog logService;
         private readonly IConfigStore configStore;
+        private readonly IAntFactory antFactory;
 
         private IDisposable owinInstance;
 
@@ -34,15 +42,19 @@ namespace Zapp.Rest
         /// <param name="kernel">Ninject kernel instance.</param>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Configuration storage instance.</param>
+        /// <param name="antFactory">Factory used for instantiating <see cref="IAnt"/>.</param>
         public OwinRestService(
             IKernel kernel,
             ILog logService,
-            IConfigStore configStore)
+            IConfigStore configStore,
+            IAntFactory antFactory)
         {
             this.kernel = kernel;
 
             this.logService = logService;
             this.configStore = configStore;
+
+            this.antFactory = antFactory;
         }
 
         /// <summary>
@@ -50,10 +62,16 @@ namespace Zapp.Rest
         /// </summary>
         public void Listen()
         {
-            var opts = new StartOptions
+            var opts = new StartOptions();
+            opts.ServerFactory = typeof(OwinHttpListener).Namespace;
+
+            var port = configStore.Value.Rest.Port;
+            var ipAddresses = GetIpAddresses();
+
+            foreach (string ipAddress in ipAddresses)
             {
-                Port = configStore.Value.Rest.Port
-            };
+                opts.Urls.Add($"http://{ipAddress}:{port}");
+            }
 
             owinInstance = WebApp.Start(opts, Startup);
 
@@ -77,6 +95,40 @@ namespace Zapp.Rest
                 .UseNinjectWebApi(config);
 
             config.MapHttpAttributeRoutes();
+        }
+
+        private IReadOnlyCollection<string> GetIpAddresses()
+        {
+            var ant = antFactory.CreateNew(configStore.Value.Rest.IpAddressPattern);
+
+            var ipAddresses = NetworkInterface
+                .GetAllNetworkInterfaces()
+                .Where(i => i.OperationalStatus == OperationalStatus.Up)
+                .SelectMany(i => i.GetIPProperties().UnicastAddresses)
+                .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(a => a.Address.ToString())
+                .ToList();
+
+            if (!IsAdministratorRole())
+            {
+                ipAddresses.Clear();
+            }
+
+            ipAddresses.Add("127.0.0.1");
+            ipAddresses.Add("localhost");
+
+            return ipAddresses
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(i => ant.IsMatch(i))
+                .ToList();
+        }
+
+        private bool IsAdministratorRole()
+        {
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
 
         /// <summary>
