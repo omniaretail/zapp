@@ -1,6 +1,7 @@
 ﻿using log4net;
 using Newtonsoft.Json;
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Zapp.Config
@@ -31,7 +32,11 @@ namespace Zapp.Config
         {
             this.logService = logService;
 
-            filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configFile);
+            var environment = Debugger.IsAttached ? "debug" : "deploy";
+
+            filePath = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                $"zapp-config.{environment}.json");
 
             lazy = new Lazy<ZappConfig>(() => Resolve());
         }
