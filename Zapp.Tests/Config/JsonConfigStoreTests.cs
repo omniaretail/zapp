@@ -76,6 +76,6 @@ namespace Zapp.Config
         }
 
         private string ConstructFilePath() => Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "zapp-config.json");
+            AppDomain.CurrentDomain.BaseDirectory, "zapp-config.deploy.json");
     }
 }
