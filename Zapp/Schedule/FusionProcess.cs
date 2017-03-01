@@ -20,6 +20,7 @@ namespace Zapp.Schedule
     /// </summary>
     public class FusionProcess : IFusionProcess, IDisposable
     {
+        private const int maxNrOfRespawns = 3;
         private static readonly TimeSpan defaultProcessTimeout = TimeSpan.FromSeconds(20);
 
         private const string startupAction = "api/lifetime/startup";
@@ -37,6 +38,8 @@ namespace Zapp.Schedule
 
         private PerformanceCounter cpuCounter;
         private PerformanceCounter memoryCounter;
+
+        private int nrOfRespawns = 0;
 
         private bool isAutoRestartEnabled = true;
 
@@ -179,7 +182,18 @@ namespace Zapp.Schedule
             {
                 bool isRespawned = TrySpawn();
 
-                LogEvent("spawn-restart", isSuccess: isRespawned);
+                int pos = ++nrOfRespawns;
+
+                if (pos >= maxNrOfRespawns)
+                {
+                    isAutoRestartEnabled = false;
+
+                    LogEvent("spawn-restart", message: "reached respawn threshold", isSuccess: isRespawned);
+                }
+                else
+                {
+                    LogEvent("spawn-restart", isSuccess: isRespawned);
+                }
             }
         }
 
