@@ -3,6 +3,7 @@ using log4net;
 using Microsoft.Owin.Host.HttpListener;
 using Microsoft.Owin.Hosting;
 using Ninject;
+using Ninject.Extensions.ChildKernel;
 using Ninject.Web.Common.OwinHost;
 using Ninject.Web.WebApi.OwinHost;
 using Owin;
@@ -26,14 +27,13 @@ namespace Zapp.Rest
     /// <summary>
     /// Represents a implementation of <see cref="IRestService"/> for the Owin NuGet package.
     /// </summary>
-    public class OwinRestService : IDisposable, IRestService
+    public class OwinRestService : IRestService, IDisposable
     {
-        private readonly IKernel kernel;
-
         private readonly ILog logService;
         private readonly IConfigStore configStore;
         private readonly IAntFactory antFactory;
 
+        private IKernel hostKernel;
         private IDisposable owinInstance;
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace Zapp.Rest
             IConfigStore configStore,
             IAntFactory antFactory)
         {
-            this.kernel = kernel;
+            hostKernel = new ChildKernel(kernel);
 
             this.logService = logService;
             this.configStore = configStore;
@@ -91,8 +91,7 @@ namespace Zapp.Rest
                 .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
                 .EnableSwaggerUi();
 
-            app.UseNinjectMiddleware(() => kernel)
-                .UseNinjectWebApi(config);
+            app.UseNinjectMiddleware(() => hostKernel).UseNinjectWebApi(config);
 
             config.MapHttpAttributeRoutes();
         }
@@ -136,16 +135,11 @@ namespace Zapp.Rest
         /// </summary>
         public void Dispose()
         {
+            hostKernel?.Dispose();
+            hostKernel = null;
+
             owinInstance?.Dispose();
             owinInstance = null;
-        }
-    }
-
-    internal class MyAssembliesResolver : DefaultAssembliesResolver
-    {
-        public override ICollection<Assembly> GetAssemblies()
-        {
-            return new[] { typeof(ZappModule).Assembly };
         }
     }
 }
