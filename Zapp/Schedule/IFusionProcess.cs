@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 
 namespace Zapp.Schedule
 {
@@ -11,6 +12,11 @@ namespace Zapp.Schedule
         /// Represents the identity of the fusion.
         /// </summary>
         string FusionId { get; }
+
+        /// <summary>
+        /// Represents the timestamp when the process started.
+        /// </summary>
+        DateTime? StartedAt { get; }
 
         /// <summary>
         /// Represents a custom session implemention.

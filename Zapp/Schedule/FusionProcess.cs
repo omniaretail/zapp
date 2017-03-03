@@ -39,6 +39,8 @@ namespace Zapp.Schedule
         private PerformanceCounter cpuCounter;
         private PerformanceCounter memoryCounter;
 
+        private DateTime? startedAt;
+
         private int nrOfRespawns = 0;
 
         private bool isAutoRestartEnabled = true;
@@ -48,6 +50,12 @@ namespace Zapp.Schedule
         /// </summary>
         /// <inheritdoc />
         public string FusionId => fusionId;
+
+        /// <summary>
+        /// Represents the timestamp when the process started.
+        /// </summary>
+        /// <inheritdoc />
+        public DateTime? StartedAt => startedAt;
 
         /// <summary>
         /// Represents a custom session implemention.
@@ -147,11 +155,20 @@ namespace Zapp.Schedule
 
             using (var client = new HttpClient().AsLocalhost(processPort))
             {
-                var isTeardownExecuted = client.ExpectOk(startupAction);
+                var isStartExecuted = client.ExpectOk(startupAction);
 
-                LogEvent("startup", message: $"Port: {processPort}", isSuccess: isTeardownExecuted);
+                LogEvent("startup", message: $"Port: {processPort}", isSuccess: isStartExecuted);
 
-                return isTeardownExecuted;
+                if (isStartExecuted)
+                {
+                    startedAt = DateTime.Now;
+                }
+                else
+                {
+                    startedAt = null;
+                }
+
+                return isStartExecuted;
             }
         }
 
