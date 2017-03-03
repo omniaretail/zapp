@@ -139,6 +139,7 @@ namespace Zapp.Schedule
         public void ScheduleAll(bool isExtractionRequired = true)
         {
             var fusionIds = configStore.Value?.Fuse?.Fusions?
+                .OrderBy(f => f.Order)
                 .Select(f => f.Id)?
                 .ToList() ?? new List<string>();
 

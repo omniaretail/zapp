@@ -115,10 +115,11 @@ namespace Zapp.Fuse
             using (var packageStream = new MemoryStream())
             {
                 var fusion = fusionFactory.CreateNew(packageStream);
+                var packages = default(List<IPackage>);
 
                 try
                 {
-                    var packages = packageVersions
+                    packages = packageVersions
                         .Select(v => packService.LoadPackage(v))
                         .ToList();
 
@@ -134,6 +135,14 @@ namespace Zapp.Fuse
                 finally
                 {
                     (fusion as IDisposable)?.Dispose();
+
+                    if (packages != null)
+                    {
+                        foreach (var package in packages)
+                        {
+                            (package as IDisposable)?.Dispose();
+                        }
+                    }
                 }
 
                 using (var packageStreamReadable = new MemoryStream(packageStream.ToArray()))

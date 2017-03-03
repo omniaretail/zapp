@@ -56,14 +56,14 @@ namespace Zapp.Deploy
         {
             Guard.ParamNotNull(versions, nameof(versions));
 
-            if (!versions.All(syncService.Announce))
-            {
-                return AnnounceResult.InternalError;
-            }
-
             if (!versions.All(packService.IsPackageVersionDeployed))
             {
                 return AnnounceResult.NotFound;
+            }
+
+            if (!versions.All(syncService.Announce))
+            {
+                return AnnounceResult.InternalError;
             }
 
             var affections = versions

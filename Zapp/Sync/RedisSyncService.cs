@@ -15,7 +15,6 @@ namespace Zapp.Sync
         private readonly ILog logService;
         private readonly IConfigStore configStore;
 
-        private IDatabase database;
         private ConnectionMultiplexer multiplexer;
 
         /// <summary>
@@ -40,7 +39,6 @@ namespace Zapp.Sync
             SyncConfig config = configStore.Value.Sync;
 
             multiplexer = ConnectionMultiplexer.Connect(config.ConnectionString);
-            database = multiplexer.GetDatabase();
 
             logService.Info($"connected to: {config.ConnectionString}");
         }
@@ -54,7 +52,9 @@ namespace Zapp.Sync
         {
             Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
 
-            return database.StringGet($"package:{packageId}");
+            return multiplexer
+                .GetDatabase()
+                .StringGet($"package:{packageId}");
         }
 
         /// <summary>
@@ -66,7 +66,9 @@ namespace Zapp.Sync
         {
             Guard.ParamNotNull(version, nameof(version));
 
-            return database.StringSet($"package:{version.PackageId}", version.DeployVersion);
+            return multiplexer
+                .GetDatabase()
+                .StringSet($"package:{version.PackageId}", version.DeployVersion);
         }
 
         /// <summary>
@@ -76,8 +78,6 @@ namespace Zapp.Sync
         {
             multiplexer?.Dispose();
             multiplexer = null;
-
-            database = null;
         }
     }
 }

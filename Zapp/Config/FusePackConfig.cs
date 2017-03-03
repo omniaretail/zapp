@@ -15,6 +15,12 @@ namespace Zapp.Config
         public string Id { get; set; }
 
         /// <summary>
+        /// Represents the order of scheduling of the package.
+        /// </summary>
+        [JsonProperty("order")]
+        public int Order { get; set; }
+
+        /// <summary>
         /// Represents a collection with the containing packages.
         /// </summary>
         [JsonProperty("packageIds")]
