@@ -56,9 +56,9 @@ namespace Zapp.Process.Rest
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
 
-            config
-                .EnableSwagger(c => c.SingleApiVersion("v1", "ZappProcess"))
-                .EnableSwaggerUi();
+            //config
+            //    .EnableSwagger(c => c.SingleApiVersion("v1", "ZappProcess"))
+            //    .EnableSwaggerUi();
 
             app.UseNinjectMiddleware(() => kernel).UseNinjectWebApi(config);
 
