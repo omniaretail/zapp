@@ -16,6 +16,10 @@ namespace Zapp.Deploy
         {
             var version = new PackageVersion("lib1", "1.0.0");
 
+            kernel.GetMock<IPackService>()
+                .Setup(m => m.IsPackageVersionDeployed(version))
+                .Returns(true);
+
             kernel.GetMock<ISyncService>()
                 .Setup(m => m.Announce(version))
                 .Returns(false);
