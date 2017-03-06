@@ -22,10 +22,7 @@ namespace Zapp.Process
 
             try
             {
-                var settings = new NinjectSettings();
-                settings.LoadExtensions = false;
-
-                using (kernel = new StandardKernel(settings, new ZappProcessModule()))
+                using (kernel = new StandardKernel(new ZappProcessModule()))
                 {
                     zappProcess = kernel.Get<IZappProcess>();
                     zappProcess.Start();
@@ -36,9 +33,7 @@ namespace Zapp.Process
             }
             catch (Exception ex)
             {
-                var file = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash_dump.log");
-
-                File.WriteAllText(file, ex.ToString());
+                HandleException(ex);
             }
             finally
             {
@@ -51,6 +46,13 @@ namespace Zapp.Process
                 (processController as IDisposable)?.Dispose();
                 processController = null;
             }
+        }
+
+        private static void HandleException(Exception ex)
+        {
+            var file = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash_dump.log");
+
+            File.WriteAllText(file, ex.ToString());
         }
     }
 }

@@ -7,14 +7,14 @@ namespace Zapp.Core.Owin
     /// <summary>
     /// Represents an override of <see cref="DefaultAssembliesResolver"/>.
     /// </summary>
-    public class StandardAssembliesResolver : DefaultAssembliesResolver
+    public class CallingAssembliesResolver : DefaultAssembliesResolver
     {
         private readonly Assembly bootstrappingAssembly;
 
         /// <summary>
-        /// Initializes a new <see cref="StandardAssembliesResolver"/>.
+        /// Initializes a new <see cref="CallingAssembliesResolver"/>.
         /// </summary>
-        public StandardAssembliesResolver()
+        public CallingAssembliesResolver()
         {
             bootstrappingAssembly = Assembly.GetCallingAssembly();
         }

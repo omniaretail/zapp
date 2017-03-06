@@ -1,4 +1,5 @@
 ﻿using Ninject.Modules;
+using Zapp.Core;
 using Zapp.Process.Client;
 using Zapp.Process.Controller;
 using Zapp.Process.Libraries;
@@ -18,6 +19,8 @@ namespace Zapp.Process
         /// <inheritdoc />
         public override void Load()
         {
+            Kernel.Load(new[] { new ZappCoreModule() });
+
             Bind<IZappProcess>().To<ZappProcess>().InSingletonScope();
 
             Bind<IProcessController>().To<ProcessController>().InSingletonScope();

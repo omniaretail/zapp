@@ -1,11 +1,10 @@
 ﻿using Ninject;
-using Ninject.Web.Common;
-using Ninject.Web.WebApi;
 using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Zapp.Core;
+using Zapp.Core.NuGet;
 using Zapp.Process.Controller;
 using Zapp.Process.Meta;
 
@@ -16,9 +15,12 @@ namespace Zapp.Process.Libraries
     /// </summary>
     public class LibraryService : ILibraryService
     {
+        private static string[] allowedExtensions = new[] { ".dll", ".exe" };
+
         private readonly IKernel kernel;
         private readonly IMetaService metaService;
         private readonly IProcessController processController;
+        private readonly INuGetPackageResolver nuGetPackageResolver;
 
         /// <summary>
         /// Initializes a new <see cref="LibraryService"/>.
@@ -26,14 +28,17 @@ namespace Zapp.Process.Libraries
         /// <param name="kernel">Ninject kernel instance.</param>
         /// <param name="metaService">Service used for receiving meta info.</param>
         /// <param name="processController">Controller for process' lifetime.</param>
+        /// <param name="nuGetPackageResolver">Resolver used to resolve NuGet packages.</param>
         public LibraryService(
             IKernel kernel,
             IMetaService metaService,
-            IProcessController processController)
+            IProcessController processController,
+            INuGetPackageResolver nuGetPackageResolver)
         {
             this.kernel = kernel;
             this.metaService = metaService;
             this.processController = processController;
+            this.nuGetPackageResolver = nuGetPackageResolver;
         }
 
         /// <summary>
@@ -42,21 +47,23 @@ namespace Zapp.Process.Libraries
         /// <inheritdoc />
         public void LoadAll()
         {
-            var libraries = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.*")
-                .Where(e => e.EndsWith(".dll") || e.EndsWith(".exe"))
+            var directory = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+
+            var nuGetPackages = nuGetPackageResolver
+                .GetPackageIds(typeof(LibraryService).Assembly);
+
+            var missingLibraries = directory.GetFiles()
+                .Where(f => allowedExtensions.Contains(f.Extension, StringComparer.OrdinalIgnoreCase))
+                .Where(f => !nuGetPackages.Contains(GetFileName(f), StringComparer.OrdinalIgnoreCase))
+                .Where(f => !IsFileLoaded(f))
                 .ToList();
 
             AppDomain.CurrentDomain.AssemblyResolve += ResolveAssembly;
 
-            foreach (string library in libraries)
+            foreach (var library in missingLibraries)
             {
-                Assembly.LoadFile(library);
+                Assembly.LoadFile(library.FullName);
             }
-
-            kernel.Load(
-                new WebCommonNinjectModule(),
-                new WebApiModule()
-            );
         }
 
         /// <summary>
@@ -128,9 +135,28 @@ namespace Zapp.Process.Libraries
         {
             var assemblyName = new AssemblyName(args.Name);
 
-            return AppDomain.CurrentDomain
+            var candidates = AppDomain.CurrentDomain
                 .GetAssemblies()
-                .FirstOrDefault(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                .Where(a => string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            return candidates
+                .OrderByDescending(c => c.GetName().Version)
+                .FirstOrDefault();
         }
+
+        private bool IsFileLoaded(FileInfo info)
+        {
+            var loadedAssemblyNames = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Select(e => e.GetName().Name)
+                .ToList();
+
+            var fileName = GetFileName(info);
+
+            return loadedAssemblyNames.Contains(fileName, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private string GetFileName(FileInfo info) => Path.GetFileNameWithoutExtension(info.Name);
     }
 }

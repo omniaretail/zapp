@@ -45,12 +45,14 @@ namespace Zapp.Process
         public void Start()
         {
             metaService.Load();
-            libraryService.LoadAll();
 
             var bindablePort = portProvider
                 .FindBindablePort();
 
             restService.Listen(bindablePort);
+
+            libraryService.LoadAll();
+
             zappClient.Announce(bindablePort);
         }
     }

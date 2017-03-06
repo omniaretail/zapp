@@ -3,6 +3,7 @@ using log4net;
 using Ninject.Extensions.Factory;
 using Ninject.Modules;
 using Zapp.Config;
+using Zapp.Core;
 using Zapp.Deploy;
 using Zapp.Fuse;
 using Zapp.Pack;
@@ -23,6 +24,8 @@ namespace Zapp
         /// </summary>
         public override void Load()
         {
+            Kernel.Load(new[] { new ZappCoreModule() });
+
             Bind<ILog>().ToMethod(ctx => LogManager.GetLogger(ctx.Request.Target.Member.DeclaringType));
 
             Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();

@@ -118,10 +118,6 @@
       <HintPath>..\packages\Ninject.Web.WebApi.OwinHost.3.2.4.0\lib\net45-full\Ninject.Web.WebApi.OwinHost.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NuGet.Core, Version=2.14.0.832, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\NuGet.Core.2.14.0\lib\net40-Client\NuGet.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
       <Private>True</Private>
@@ -179,6 +175,7 @@
     <Compile Include="Deploy\DeployService.cs" />
     <Compile Include="Deploy\IDeployService.cs" />
     <Compile Include="Fuse\FileFusionExtractor.cs" />
+    <Compile Include="Fuse\FusionProcessConfigEntry.cs" />
     <Compile Include="Fuse\FusionProcessEntry.cs" />
     <Compile Include="Fuse\FusionService.cs" />
     <Compile Include="Fuse\FusionMetaEntry.cs" />

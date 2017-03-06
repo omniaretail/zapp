@@ -7,11 +7,10 @@ using System.Linq;
 using System.Reflection;
 using Zapp.Config;
 using Zapp.Core.Clauses;
+using Zapp.Core.NuGet;
 using Zapp.Pack;
 using Zapp.Process;
 using Zapp.Sync;
-using NuGetPackageReferenceFile = NuGet.PackageReferenceFile;
-using NuGetPackageReference = NuGet.PackageReference;
 
 namespace Zapp.Fuse
 {
@@ -34,6 +33,8 @@ namespace Zapp.Fuse
 
         private readonly IReadOnlyCollection<IFusionFilter> fusionFilters;
 
+        private readonly INuGetPackageResolver nuGetPackageResolver;
+
         private IReadOnlyCollection<FileInfo> defaultEntries;
 
         /// <summary>
@@ -47,6 +48,7 @@ namespace Zapp.Fuse
         /// <param name="fusionFactory">Factory used for creating <see cref="IFusion"/> instances.</param>
         /// <param name="fusionExtractor">Extracttor used for extracting streams of fusions.</param>
         /// <param name="fusionFilters">Filters used for decorating fusion entries.</param>
+        /// <param name="nuGetPackageResolver">Resolver used to resolve NuGet packages.</param>
         public FusionService(
             ILog logService,
             IConfigStore configStore,
@@ -55,7 +57,8 @@ namespace Zapp.Fuse
             IAntFactory antFactory,
             IFusionFactory fusionFactory,
             IFusionExtracter fusionExtractor,
-            IEnumerable<IFusionFilter> fusionFilters)
+            IEnumerable<IFusionFilter> fusionFilters,
+            INuGetPackageResolver nuGetPackageResolver)
         {
             this.logService = logService;
 
@@ -68,6 +71,8 @@ namespace Zapp.Fuse
             this.fusionExtractor = fusionExtractor;
 
             this.fusionFilters = fusionFilters.ToList();
+
+            this.nuGetPackageResolver = nuGetPackageResolver;
 
             entryFilter = antFactory.CreateNew(configStore?.Value?.Fuse?.EntryPattern);
             defaultEntries = GetDefaultEntries();
@@ -239,7 +244,8 @@ namespace Zapp.Fuse
                 .Concat(new IPackageEntry[]
                 {
                     new FusionMetaEntry(),
-                    new FusionProcessEntry()
+                    new FusionProcessEntry(),
+                    new FusionProcessConfigEntry()
                 })
                 .ToList();
         }
@@ -247,41 +253,22 @@ namespace Zapp.Fuse
         private IReadOnlyCollection<FileInfo> GetDefaultEntries()
         {
             var assembly = typeof(ZappProcessModule).Assembly;
-            var resourceName = "Zapp.Process.packages.config";
 
-            var resourceFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, resourceName);
+            var references = nuGetPackageResolver
+                .GetPackageIds(assembly)
+                .Select(id => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{id}.dll"))
+                .Where(File.Exists)
+                .SelectMany(e => GetAssemblyReferences(e).Concat(new[] { e }))
+                .Concat(GetAssemblyReferences(assembly))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(File.Exists)
+                .Select(e => new FileInfo(e).Name)
+                .ToList();
 
-            try
-            {
-                using (var resourceStream = assembly.GetManifestResourceStream(resourceName))
-                using (var fileStream = File.OpenWrite(resourceFilePath))
-                {
-                    resourceStream.CopyTo(fileStream);
-                }
-
-                var references = new NuGetPackageReferenceFile(resourceFilePath)
-                    .GetPackageReferences()
-                    .Select(p => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{p.Id}.dll"))
-                    .Where(File.Exists)
-                    .SelectMany(e => GetAssemblyReferences(e).Concat(new[] { e }))
-                    .Concat(GetAssemblyReferences(assembly))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Where(File.Exists)
-                    .Select(e => new FileInfo(e).Name)
-                    .ToList();
-
-                return Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
-                    .Select(f => new FileInfo(f))
-                    .Where(i => references.Contains(i.Name, StringComparer.OrdinalIgnoreCase))
-                    .ToList();
-            }
-            finally
-            {
-                if (File.Exists(resourceFilePath))
-                {
-                    File.Delete(resourceFilePath);
-                }
-            }
+            return Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
+                .Select(f => new FileInfo(f))
+                .Where(i => references.Contains(i.Name, StringComparer.OrdinalIgnoreCase))
+                .ToList();
         }
 
         private string GetReferencePath(string fileName) => Path.Combine(

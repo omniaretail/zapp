@@ -49,16 +49,16 @@ namespace Zapp.Process.Rest
         {
             var config = new HttpConfiguration();
 
-            config.Services.Replace(typeof(IAssembliesResolver), new StandardAssembliesResolver());
+            config.Services.Replace(typeof(IAssembliesResolver), new CallingAssembliesResolver());
 
             config.MapHttpAttributeRoutes();
 
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
 
-            //config
-            //    .EnableSwagger(c => c.SingleApiVersion("v1", "ZappProcess"))
-            //    .EnableSwaggerUi();
+            config
+                .EnableSwagger(c => c.SingleApiVersion("v1", "ZappProcess"))
+                .EnableSwaggerUi();
 
             app.UseNinjectMiddleware(() => kernel).UseNinjectWebApi(config);
 

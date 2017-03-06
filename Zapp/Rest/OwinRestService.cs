@@ -10,17 +10,14 @@ using Owin;
 using Swashbuckle.Application;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.Http.Formatting;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Security.Principal;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using Zapp.Config;
-using Zapp.Core.Owin;
 
 namespace Zapp.Rest
 {
@@ -32,6 +29,7 @@ namespace Zapp.Rest
         private readonly ILog logService;
         private readonly IConfigStore configStore;
         private readonly IAntFactory antFactory;
+        private readonly IAssembliesResolver assembliesResolver;
 
         private IKernel hostKernel;
         private IDisposable owinInstance;
@@ -43,11 +41,13 @@ namespace Zapp.Rest
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Configuration storage instance.</param>
         /// <param name="antFactory">Factory used for instantiating <see cref="IAnt"/>.</param>
+        /// <param name="assembliesResolver">Resolver which resolves assemblies for owin.</param>
         public OwinRestService(
             IKernel kernel,
             ILog logService,
             IConfigStore configStore,
-            IAntFactory antFactory)
+            IAntFactory antFactory,
+            IAssembliesResolver assembliesResolver)
         {
             hostKernel = new ChildKernel(kernel);
 
@@ -55,6 +55,8 @@ namespace Zapp.Rest
             this.configStore = configStore;
 
             this.antFactory = antFactory;
+
+            this.assembliesResolver = assembliesResolver;
         }
 
         /// <summary>
@@ -82,7 +84,7 @@ namespace Zapp.Rest
         {
             var config = new HttpConfiguration();
 
-            config.Services.Replace(typeof(IAssembliesResolver), new StandardAssembliesResolver());
+            config.Services.Replace(typeof(IAssembliesResolver), assembliesResolver);
 
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
