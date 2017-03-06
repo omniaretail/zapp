@@ -8,6 +8,7 @@ using Zapp.Deploy;
 using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Rest;
+using Zapp.Rest.Controllers;
 using Zapp.Schedule;
 using Zapp.Server;
 using Zapp.Sync;

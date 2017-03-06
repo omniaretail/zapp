@@ -14,10 +14,12 @@ using System.Linq;
 using System.Net.Http.Formatting;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Security.Principal;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using Zapp.Config;
+using Zapp.Core.Owin;
 
 namespace Zapp.Rest
 {
@@ -41,13 +43,13 @@ namespace Zapp.Rest
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Configuration storage instance.</param>
         /// <param name="antFactory">Factory used for instantiating <see cref="IAnt"/>.</param>
-        /// <param name="assembliesResolver">Resolver which resolves assemblies for owin.</param>
+        /// <param name="assembliesResolverFactory">Factory used for instantiating <see cref="IAssembliesResolver"/>.</param>
         public OwinRestService(
             IKernel kernel,
             ILog logService,
             IConfigStore configStore,
             IAntFactory antFactory,
-            IAssembliesResolver assembliesResolver)
+            IAssembliesResolverFactory assembliesResolverFactory)
         {
             hostKernel = new ChildKernel(kernel);
 
@@ -56,7 +58,8 @@ namespace Zapp.Rest
 
             this.antFactory = antFactory;
 
-            this.assembliesResolver = assembliesResolver;
+            assembliesResolver = assembliesResolverFactory
+                .CreateNew(typeof(OwinRestService).Assembly);
         }
 
         /// <summary>
@@ -89,13 +92,20 @@ namespace Zapp.Rest
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
 
+            var assemblyName = typeof(ZappModule).Assembly.GetName();
+
+            var apiName = assemblyName.Name;
+            var apiVersion = assemblyName.Version.ToString();
+
             config
-                .EnableSwagger(c => c.SingleApiVersion("v1", "Zapp"))
+                .EnableSwagger(c => c.SingleApiVersion(apiVersion, apiName))
                 .EnableSwaggerUi();
 
             app.UseNinjectMiddleware(() => hostKernel).UseNinjectWebApi(config);
 
             config.MapHttpAttributeRoutes();
+
+            config.EnsureInitialized();
         }
 
         private IReadOnlyCollection<string> GetIpAddresses()

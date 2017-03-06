@@ -1,5 +1,6 @@
 ﻿using Microsoft.Owin.Hosting;
 using Ninject;
+using Ninject.Extensions.ChildKernel;
 using Ninject.Web.Common.OwinHost;
 using Ninject.Web.WebApi.OwinHost;
 using Owin;
@@ -19,17 +20,24 @@ namespace Zapp.Process.Rest
     /// </summary>
     public class OwinRestService : IRestService, IDisposable
     {
-        private readonly IKernel kernel;
+        private readonly IAssembliesResolver assembliesResolver;
 
+        private IKernel hostKernel;
         private IDisposable owinInstance;
 
         /// <summary>
         /// Initializes a new <see cref="OwinRestService"/>.
         /// </summary>
         /// <param name="kernel">Ninject kernel instance.</param>
-        public OwinRestService(IKernel kernel)
+        /// <param name="assembliesResolverFactory">Factory used for instantiating <see cref="IAssembliesResolver"/>.</param>
+        public OwinRestService(
+            IKernel kernel,
+            IAssembliesResolverFactory assembliesResolverFactory)
         {
-            this.kernel = kernel;
+            this.hostKernel = new ChildKernel(kernel);
+
+            assembliesResolver = assembliesResolverFactory
+                .CreateNew(typeof(OwinRestService).Assembly);
         }
 
         /// <summary>
@@ -49,18 +57,23 @@ namespace Zapp.Process.Rest
         {
             var config = new HttpConfiguration();
 
-            config.Services.Replace(typeof(IAssembliesResolver), new CallingAssembliesResolver());
+            config.Services.Replace(typeof(IAssembliesResolver), assembliesResolver);
 
             config.MapHttpAttributeRoutes();
 
             config.Formatters.Clear();
             config.Formatters.Add(new JsonMediaTypeFormatter());
 
+            var assemblyName = typeof(ZappProcessModule).Assembly.GetName();
+
+            var apiName = assemblyName.Name;
+            var apiVersion = assemblyName.Version.ToString();
+
             config
-                .EnableSwagger(c => c.SingleApiVersion("v1", "ZappProcess"))
+                .EnableSwagger(c => c.SingleApiVersion(apiVersion, apiName))
                 .EnableSwaggerUi();
 
-            app.UseNinjectMiddleware(() => kernel).UseNinjectWebApi(config);
+            app.UseNinjectMiddleware(() => hostKernel).UseNinjectWebApi(config);
 
             config.EnsureInitialized();
         }
@@ -70,6 +83,9 @@ namespace Zapp.Process.Rest
         /// </summary>
         public void Dispose()
         {
+            hostKernel?.Dispose();
+            hostKernel = null;
+
             owinInstance?.Dispose();
             owinInstance = null;
         }
