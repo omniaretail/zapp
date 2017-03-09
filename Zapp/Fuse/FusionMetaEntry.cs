@@ -10,9 +10,9 @@ using Zapp.Pack;
 namespace Zapp.Fuse
 {
     /// <summary>
-    /// Represents an implementation of <see cref="IPackageEntry"/> for fusion meta info.
+    /// Represents an implementation of <see cref="IFrameworkPackageEntry"/> for fusion meta info.
     /// </summary>
-    public class FusionMetaEntry : IPackageEntry
+    public class FusionMetaEntry : IFrameworkPackageEntry
     {
         /// <summary>
         /// Represents the key of the executable info.

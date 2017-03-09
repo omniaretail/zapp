@@ -36,6 +36,30 @@ namespace Zapp.Config
         public List<FusePackConfig> Fusions { get; set; } = new List<FusePackConfig>();
 
         /// <summary>
+        /// Represents a security configuration for loading unknown assemblies.
+        /// </summary>
+        [JsonProperty("isLoadFromRemoteSourcesEnabled")]
+        public bool IsLoadFromRemoteSourcesEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Represents a configuration to enable per-process garbage collection threads.
+        /// </summary>
+        [JsonProperty("isGcServerEnabled")]
+        public bool IsGcServerEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Represents a configuration to enable concurrent garbage collection.
+        /// </summary>
+        [JsonProperty("isGcConcurrentEnabled")]
+        public bool IsGcConcurrentEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Represents a configuration to enable garbage collection for very large objects.
+        /// </summary>
+        [JsonProperty("isGcVeryLargeObjectsAllowed")]
+        public bool IsGcVeryLargeObjectsAllowed { get; set; } = false;
+
+        /// <summary>
         /// Resolves the actual root directory.
         /// </summary>
         public string GetActualRootDirectory() => RootDirectory

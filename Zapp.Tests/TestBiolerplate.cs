@@ -30,6 +30,8 @@ namespace Zapp
             kernel = null;
         }
 
+        protected T sut => kernel.Get<T>();
+
         protected T GetSystemUnderTest() => kernel.Get<T>();
     }
 }

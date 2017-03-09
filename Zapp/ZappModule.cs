@@ -1,17 +1,20 @@
 ﻿using AntPathMatching;
 using log4net;
 using Ninject.Extensions.Factory;
+using Ninject.Extensions.Perspectives;
 using Ninject.Modules;
+using System.IO;
 using Zapp.Config;
 using Zapp.Core;
 using Zapp.Deploy;
 using Zapp.Fuse;
 using Zapp.Pack;
+using Zapp.Perspectives;
 using Zapp.Rest;
-using Zapp.Rest.Controllers;
 using Zapp.Schedule;
 using Zapp.Server;
 using Zapp.Sync;
+using Zapp.Transform;
 
 namespace Zapp
 {
@@ -58,6 +61,16 @@ namespace Zapp
 
             Bind<IFusionProcess>().To<FusionProcess>();
             Bind<IFusionProcessFactory>().ToFactory();
+
+            Bind<ITransformConfig>().To<XmlTransformConfig>().InSingletonScope();
+
+            Bind<IFrameworkPackageEntry>().To<FusionMetaEntry>();
+            Bind<IFrameworkPackageEntry>().To<FusionProcessEntry>();
+            Bind<IFrameworkPackageEntry>().To<FusionProcessConfigEntry>();
+
+            Bind<IFrameworkPackageEntryFactory>().ToFactory();
+
+            Bind<IFile>().ToPerspective(typeof(File));
         }
     }
 }

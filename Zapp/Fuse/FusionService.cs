@@ -34,6 +34,7 @@ namespace Zapp.Fuse
         private readonly IReadOnlyCollection<IFusionFilter> fusionFilters;
 
         private readonly INuGetPackageResolver nuGetPackageResolver;
+        private readonly IFrameworkPackageEntryFactory frameworkPackageEntryFactory;
 
         private IReadOnlyCollection<FileInfo> defaultEntries;
 
@@ -49,6 +50,7 @@ namespace Zapp.Fuse
         /// <param name="fusionExtractor">Extracttor used for extracting streams of fusions.</param>
         /// <param name="fusionFilters">Filters used for decorating fusion entries.</param>
         /// <param name="nuGetPackageResolver">Resolver used to resolve NuGet packages.</param>
+        /// <param name="frameworkPackageEntryFactory">Factory used for creati9ng <see cref="IFrameworkPackageEntry"/> instances.</param>
         public FusionService(
             ILog logService,
             IConfigStore configStore,
@@ -58,7 +60,8 @@ namespace Zapp.Fuse
             IFusionFactory fusionFactory,
             IFusionExtracter fusionExtractor,
             IEnumerable<IFusionFilter> fusionFilters,
-            INuGetPackageResolver nuGetPackageResolver)
+            INuGetPackageResolver nuGetPackageResolver,
+            IFrameworkPackageEntryFactory frameworkPackageEntryFactory)
         {
             this.logService = logService;
 
@@ -73,6 +76,7 @@ namespace Zapp.Fuse
             this.fusionFilters = fusionFilters.ToList();
 
             this.nuGetPackageResolver = nuGetPackageResolver;
+            this.frameworkPackageEntryFactory = frameworkPackageEntryFactory;
 
             entryFilter = antFactory.CreateNew(configStore?.Value?.Fuse?.EntryPattern);
             defaultEntries = GetDefaultEntries();
@@ -241,12 +245,9 @@ namespace Zapp.Fuse
         {
             return defaultEntries
                 .Select(f => new LazyPackageEntry(f.Name, new LazyStream(() => f.OpenRead())))
-                .Concat(new IPackageEntry[]
-                {
-                    new FusionMetaEntry(),
-                    new FusionProcessEntry(),
-                    new FusionProcessConfigEntry()
-                })
+                .Concat(frameworkPackageEntryFactory
+                    .CreateNew()
+                    .Cast<IPackageEntry>())
                 .ToList();
         }
 

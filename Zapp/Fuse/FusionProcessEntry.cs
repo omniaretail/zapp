@@ -7,7 +7,7 @@ namespace Zapp.Fuse
     /// <summary>
     /// Represents an implementation of <see cref="IPackageEntry"/> for fusion process.
     /// </summary>
-    public class FusionProcessEntry : IPackageEntry
+    public class FusionProcessEntry : IFrameworkPackageEntry
     {
         /// <summary>
         /// Represents the default name of this entry.

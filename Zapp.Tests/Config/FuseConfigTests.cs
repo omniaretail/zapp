@@ -17,6 +17,10 @@ namespace Zapp.Config
             Assert.That(sut.EntryPattern, Is.Not.Null);
             Assert.That(sut.FusionDirectoryPattern, Is.Not.Null);
             Assert.That(sut.Fusions, Is.Not.Null);
+            Assert.That(sut.IsLoadFromRemoteSourcesEnabled, Is.EqualTo(false));
+            Assert.That(sut.IsGcServerEnabled, Is.EqualTo(false));
+            Assert.That(sut.IsGcConcurrentEnabled, Is.EqualTo(true));
+            Assert.That(sut.IsGcVeryLargeObjectsAllowed, Is.EqualTo(false));
         }
 
         [Test]

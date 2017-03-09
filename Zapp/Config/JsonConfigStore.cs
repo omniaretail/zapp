@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
 using System.IO;
+using Zapp.Perspectives;
 
 namespace Zapp.Config
 {
@@ -14,6 +15,7 @@ namespace Zapp.Config
         private const string configFile = "zapp-config.json";
 
         private readonly ILog logService;
+        private readonly IFile file;
 
         private string filePath;
         private Lazy<ZappConfig> lazy;
@@ -28,9 +30,13 @@ namespace Zapp.Config
         /// Initializes a new <see cref="JsonConfigStore"/>.
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
-        public JsonConfigStore(ILog logService)
+        /// <param name="file">Util used for file operations.</param>
+        public JsonConfigStore(
+            ILog logService,
+            IFile file)
         {
             this.logService = logService;
+            this.file = file;
 
             var environment = Debugger.IsAttached ? "debug" : "deploy";
 
@@ -43,12 +49,12 @@ namespace Zapp.Config
 
         private ZappConfig Resolve()
         {
-            if (!File.Exists(filePath))
+            if (!file.Exists(filePath))
             {
                 return Prefab();
             }
 
-            string content = File.ReadAllText(filePath);
+            string content = file.ReadAllText(filePath);
 
             return JsonConvert.DeserializeObject<ZappConfig>(content);
         }
@@ -61,7 +67,7 @@ namespace Zapp.Config
 
             string content = JsonConvert.SerializeObject(cfg, Formatting.Indented);
 
-            File.WriteAllText(filePath, content);
+            file.WriteAllText(filePath, content);
 
             return cfg;
         }

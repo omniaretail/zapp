@@ -157,6 +157,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\AssetsHelper.cs" />
+    <Compile Include="Fuse\FusionProcessConfigEntryTests.cs" />
+    <Compile Include="ZappModuleTests.cs" />
     <Compile Include="Deploy\DeployServiceTests.cs" />
     <Compile Include="Fuse\FusionProcessEntryTests.cs" />
     <Compile Include="Fuse\FusionServiceTests.cs" />
@@ -165,7 +167,7 @@
     <Compile Include="Config\FuseConfigTests.cs" />
     <Compile Include="Config\JsonConfigStoreTests.cs" />
     <Compile Include="Config\PackConfigTests.cs" />
-    <Compile Include="Config\PackFusionConfigTests.cs" />
+    <Compile Include="Config\FusePackConfigTests.cs" />
     <Compile Include="Config\RestConfigTests.cs" />
     <Compile Include="Config\SyncConfigTests.cs" />
     <Compile Include="Config\ZappConfigTests.cs" />
@@ -178,11 +180,14 @@
     <Compile Include="Pack\PackServiceTests.cs" />
     <Compile Include="Pack\ZipPackageTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Rest\OwinRestServiceIntegrationTests.cs" />
     <Compile Include="Server\ZappServerTests.cs" />
+    <Compile Include="Transform\XmlTransformConfigTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="Assets\case-app.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Assets\test.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

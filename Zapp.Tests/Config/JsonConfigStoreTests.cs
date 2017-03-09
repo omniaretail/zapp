@@ -1,81 +1,44 @@
 ﻿using log4net;
 using Moq;
-using Newtonsoft.Json;
 using NUnit.Framework;
-using System;
-using System.IO;
+using Zapp.Perspectives;
 
 namespace Zapp.Config
 {
     [TestFixture]
     public class JsonConfigStoreTests : TestBiolerplate<JsonConfigStore>
     {
-        private string filePath;
-
-        [TearDown]
-        public override void Teardown()
-        {
-            base.Teardown();
-
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-        }
-
-        [OneTimeSetUp]
-        public void OneTimeSetup()
-        {
-            filePath = ConstructFilePath();
-
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-        }
-
         [Test]
-        public void Lazy_WhenFileDoesNotExists_PrefabsFileAndLogsWarning()
+        public void Value_WhenFileDoesNotExist_PerformsPrefab()
         {
-            Assert.That(File.Exists(filePath), Is.EqualTo(false));
+            kernel.GetMock<IFile>()
+                .Setup(m => m.Exists(It.IsAny<string>()))
+                .Returns(false);
 
-            var sut = GetSystemUnderTest();
+            var result = sut.Value;
 
-            var config = sut.Value;
-
-            Assert.That(config, Is.Not.Null);
-            Assert.That(File.Exists(filePath), Is.EqualTo(true));
+            kernel.GetMock<IFile>()
+                .Verify(m => m.WriteAllText(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(1));
 
             kernel.GetMock<ILog>()
                 .Verify(m => m.Warn(It.IsAny<string>()), Times.Exactly(1));
         }
 
         [Test]
-        public void Lazy_WhenFileExists_LoadsOneTime()
+        public void Value_WhenFileDoesExist_ReadsFromFile()
         {
-            var cfg = new ZappConfig();
-            var content = JsonConvert.SerializeObject(cfg);
+            kernel.GetMock<IFile>()
+                .Setup(m => m.Exists(It.IsAny<string>()))
+                .Returns(true);
 
-            File.WriteAllText(filePath, content);
+            kernel.GetMock<IFile>()
+                .Setup(m => m.ReadAllText(It.IsAny<string>()))
+                .Returns("{}");
 
-            var sut = GetSystemUnderTest();
+            var result = sut.Value;
 
-            var config = sut.Value;
-
-            Assert.That(config, Is.Not.Null);
-            Assert.That(config.Rest, Is.Not.Null);
-
-            cfg.Rest = null;
-
-            File.WriteAllText(filePath, content);
-
-            config = sut.Value;
-
-            Assert.That(config, Is.Not.Null);
-            Assert.That(config.Rest, Is.Not.Null);
+            kernel.GetMock<IFile>()
+                .Verify(m => m.ReadAllText(It.IsAny<string>()), Times.Exactly(1));
         }
-
-        private string ConstructFilePath() => Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "zapp-config.deploy.json");
     }
 }
