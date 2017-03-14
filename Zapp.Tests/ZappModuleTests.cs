@@ -12,6 +12,7 @@ namespace Zapp
         private readonly string[] pluginTypes = new[]
         {
             nameof(IFusionFilter),
+            nameof(IFusionInterceptor),
             nameof(IFusionProcessDrainer),
             nameof(IFusionProcessInterceptor),
         };

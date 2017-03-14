@@ -206,6 +206,7 @@
     <Compile Include="Fuse\IFusionExtracter.cs" />
     <Compile Include="Fuse\IFusionFactory.cs" />
     <Compile Include="Fuse\IFusionFilter.cs" />
+    <Compile Include="Fuse\IFusionInterceptor.cs" />
     <Compile Include="Fuse\IFusionService.cs" />
     <Compile Include="Fuse\ZipFusion.cs" />
     <Compile Include="Fuse\IFrameworkPackageEntry.cs" />

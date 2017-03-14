@@ -32,6 +32,7 @@ namespace Zapp.Fuse
         private readonly IFusionExtracter fusionExtractor;
 
         private readonly IReadOnlyCollection<IFusionFilter> fusionFilters;
+        private readonly IReadOnlyCollection<IFusionInterceptor> fusionInterceptors;
 
         private readonly INuGetPackageResolver nuGetPackageResolver;
         private readonly IFrameworkPackageEntryFactory frameworkPackageEntryFactory;
@@ -49,6 +50,7 @@ namespace Zapp.Fuse
         /// <param name="fusionFactory">Factory used for creating <see cref="IFusion"/> instances.</param>
         /// <param name="fusionExtractor">Extracttor used for extracting streams of fusions.</param>
         /// <param name="fusionFilters">Filters used for decorating fusion entries.</param>
+        /// <param name="fusionInterceptors">Interceptors used for adding fusion entries.</param>
         /// <param name="nuGetPackageResolver">Resolver used to resolve NuGet packages.</param>
         /// <param name="frameworkPackageEntryFactory">Factory used for creati9ng <see cref="IFrameworkPackageEntry"/> instances.</param>
         public FusionService(
@@ -60,6 +62,7 @@ namespace Zapp.Fuse
             IFusionFactory fusionFactory,
             IFusionExtracter fusionExtractor,
             IEnumerable<IFusionFilter> fusionFilters,
+            IEnumerable<IFusionInterceptor> fusionInterceptors,
             INuGetPackageResolver nuGetPackageResolver,
             IFrameworkPackageEntryFactory frameworkPackageEntryFactory)
         {
@@ -74,6 +77,7 @@ namespace Zapp.Fuse
             this.fusionExtractor = fusionExtractor;
 
             this.fusionFilters = fusionFilters.ToList();
+            this.fusionInterceptors = fusionInterceptors.ToList();
 
             this.nuGetPackageResolver = nuGetPackageResolver;
             this.frameworkPackageEntryFactory = frameworkPackageEntryFactory;
@@ -132,7 +136,7 @@ namespace Zapp.Fuse
                         .Select(v => packService.LoadPackage(v))
                         .ToList();
 
-                    var entries = PrioritizeEntries(GenerateDefaultEntries(), packages);
+                    var entries = MashEntries(GenerateDefaultEntries(fusionConfig), packages);
 
                     foreach (var entry in entries)
                     {
@@ -229,7 +233,7 @@ namespace Zapp.Fuse
             fusion.AddEntry(entry);
         }
 
-        private IReadOnlyCollection<IPackageEntry> PrioritizeEntries(
+        private IReadOnlyCollection<IPackageEntry> MashEntries(
             IReadOnlyCollection<IPackageEntry> standardEntries,
             IReadOnlyCollection<IPackage> packages)
         {
@@ -241,13 +245,19 @@ namespace Zapp.Fuse
                 .ToList();
         }
 
-        private IReadOnlyCollection<IPackageEntry> GenerateDefaultEntries()
+        private IReadOnlyCollection<IPackageEntry> GenerateDefaultEntries(FusePackConfig fusionConfig)
         {
+            var interceptors = fusionInterceptors
+                .Select(e => e.GetEntries(fusionConfig))
+                .Where(e => e != null)
+                .SelectMany(e => e);
+
             return defaultEntries
                 .Select(f => new LazyPackageEntry(f.Name, new LazyStream(() => f.OpenRead())))
                 .Concat(frameworkPackageEntryFactory
                     .CreateNew()
                     .Cast<IPackageEntry>())
+                .Concat(interceptors)
                 .ToList();
         }
 
