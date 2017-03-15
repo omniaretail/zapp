@@ -193,7 +193,7 @@ namespace Zapp.Schedule
 
         private void OnExited()
         {
-            LogEvent("exited");
+            LogEvent("exited", isSuccess: !isAutoRestartEnabled);
 
             if (isAutoRestartEnabled)
             {
