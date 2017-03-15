@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Zapp.Config;
 using Zapp.Core.Clauses;
 using Zapp.Fuse;
@@ -13,6 +14,9 @@ namespace Zapp.Schedule
     /// </summary>
     public class ScheduleService : IScheduleService, IDisposable
     {
+        private static readonly TimeSpan waitForStartTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan waitForStartInterval = TimeSpan.FromSeconds(1);
+
         private bool isGlobalExtractionCompleted = false;
 
         private readonly ILog logService;
@@ -109,18 +113,29 @@ namespace Zapp.Schedule
                             Schedule(fusionId);
                         }
 
-                        foreach (var drainer in drainers)
-                        {
-                            try
-                            {
-                                drainer.Resume();
+                        bool isFinished = WaitForProcessesToStartAsync()
+                            .GetAwaiter()
+                            .GetResult();
 
-                                logService.Info($"Drainer: resume {drainer.GetType().Name} finished.");
-                            }
-                            catch (Exception ex)
+                        if (isFinished)
+                        {
+                            foreach (var drainer in drainers)
                             {
-                                logService.Error("Failed to run drainer for event Resume", ex);
+                                try
+                                {
+                                    drainer.Resume();
+
+                                    logService.Info($"Drainer: resume {drainer.GetType().Name} finished.");
+                                }
+                                catch (Exception ex)
+                                {
+                                    logService.Error("Failed to run drainer for event Resume", ex);
+                                }
                             }
+                        }
+                        else
+                        {
+                            logService.Fatal("Failed to spawn/start fusion batch.");
                         }
                     }
                     else
@@ -259,6 +274,28 @@ namespace Zapp.Schedule
 
                 DrainAndStop(fusionIds);
             }
+        }
+
+        private async Task<bool> WaitForProcessesToStartAsync()
+        {
+            var startedAt = DateTime.UtcNow;
+
+            var isCompleted = false;
+
+            while (!isCompleted &&
+                (DateTime.UtcNow - startedAt) < waitForStartTimeout)
+            {
+                isCompleted = !processes.Values
+                    .Where(p => p.StartedAt == null)
+                    .Any();
+
+                if (!isCompleted)
+                {
+                    await Task.Delay(waitForStartInterval);
+                }
+            }
+
+            return isCompleted;
         }
 
         private bool TryGetProcess(string fusionId, out IFusionProcess process)

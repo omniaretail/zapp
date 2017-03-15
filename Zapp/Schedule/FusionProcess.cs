@@ -247,6 +247,7 @@ namespace Zapp.Schedule
         /// </summary>
         public void Dispose()
         {
+            startedAt = null;
             isAutoRestartEnabled = false;
 
             if (process?.HasExited == false)

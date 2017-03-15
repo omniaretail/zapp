@@ -1,10 +1,12 @@
 ﻿using AntPathMatching;
 using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Zapp.Config;
 using Zapp.Core.Clauses;
 using Zapp.Core.NuGet;
@@ -173,7 +175,7 @@ namespace Zapp.Fuse
         /// <param name="fusionIds">Identities of the fusion.</param>
         /// <inheritdoc />
         public bool TryExtractFusionBatch(IReadOnlyCollection<string> fusionIds) =>
-            fusionIds.All(f => TryExtractFusion(f)) == true;
+            fusionIds.AsParallel().All(f => TryExtractFusion(f)) == true;
 
         /// <summary>
         /// Searches for affected fusion packages.
