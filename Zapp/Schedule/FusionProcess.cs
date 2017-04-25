@@ -20,7 +20,7 @@ namespace Zapp.Schedule
     /// </summary>
     public class FusionProcess : IFusionProcess, IDisposable
     {
-        private const int maxNrOfRespawns = 3;
+        private const int maxNrOfRespawns = 10;
         private static readonly TimeSpan defaultProcessTimeout = TimeSpan.FromSeconds(20);
 
         private const string startupAction = "api/lifetime/startup";
@@ -205,7 +205,7 @@ namespace Zapp.Schedule
                 {
                     isAutoRestartEnabled = false;
 
-                    LogEvent("spawn-restart", message: "reached respawn threshold", isSuccess: isRespawned);
+                    LogEvent("spawn-restart", message: "reached respawn threshold", isSuccess: isRespawned, isCritical: true);
                 }
                 else
                 {
@@ -221,7 +221,7 @@ namespace Zapp.Schedule
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(metaContent);
         }
 
-        private void LogEvent(string eventName, string message = null, bool? isSuccess = false)
+        private void LogEvent(string eventName, string message = null, bool? isSuccess = false, bool? isCritical = false)
         {
             var text = $"Process: {fusionId} Event: {eventName} Message: {message ?? "not provided"}";
 
@@ -233,7 +233,14 @@ namespace Zapp.Schedule
                 }
                 else
                 {
-                    logService.Error(text);
+                    if (isCritical.Value == true)
+                    {
+                        logService.Fatal(text);
+                    }
+                    else
+                    {
+                        logService.Error(text);
+                    }
                 }
             }
             else
