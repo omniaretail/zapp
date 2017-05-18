@@ -151,6 +151,8 @@ namespace Zapp.Schedule
         /// <inheritdoc />
         public bool TryRequestStart(int port)
         {
+            startedAt = null;
+
             processPort = port;
 
             using (var client = new HttpClient().AsLocalhost(processPort))
@@ -158,15 +160,6 @@ namespace Zapp.Schedule
                 var isStartExecuted = client.ExpectOk(startupAction);
 
                 LogEvent("startup", message: $"Port: {processPort}", isSuccess: isStartExecuted);
-
-                if (isStartExecuted)
-                {
-                    startedAt = DateTime.Now;
-                }
-                else
-                {
-                    startedAt = null;
-                }
 
                 return isStartExecuted;
             }
@@ -190,6 +183,12 @@ namespace Zapp.Schedule
                 return isTeardownExecuted;
             }
         }
+
+        /// <summary>
+        /// Called when the interceptors are informed.
+        /// </summary>
+        /// <inheritdoc />
+        public void OnInterceptorsInformed() => startedAt = DateTime.UtcNow;
 
         private void OnExited()
         {

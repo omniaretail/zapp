@@ -48,5 +48,10 @@ namespace Zapp.Schedule
         /// Tries to request the process to stop.
         /// </summary>
         bool TryRequestStop();
+
+        /// <summary>
+        /// Called when the interceptors are informed.
+        /// </summary>
+        void OnInterceptorsInformed();
     }
 }

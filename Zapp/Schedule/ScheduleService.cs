@@ -199,6 +199,8 @@ namespace Zapp.Schedule
                 }
             }
 
+            process.OnInterceptorsInformed();
+
             return true;
         }
 
