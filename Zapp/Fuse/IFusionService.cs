@@ -9,21 +9,15 @@ namespace Zapp.Fuse
     public interface IFusionService
     {
         /// <summary>
-        /// Starts to extract all the packages.
+        /// Extracts all fusions.
         /// </summary>
-        bool TryExtract();
+        void ExtractAll();
 
         /// <summary>
-        /// Tries to create a new fusion extraction.
-        /// </summary>
-        /// <param name="fusionId">Identity of the fusion.</param>
-        bool TryExtractFusion(string fusionId);
-
-        /// <summary>
-        /// Tries to create new fusion extractions.
+        /// Extracts multiple fusions.
         /// </summary>
         /// <param name="fusionIds">Identities of the fusion.</param>
-        bool TryExtractFusionBatch(IReadOnlyCollection<string> fusionIds);
+        void ExtractMultiple(IEnumerable<string> fusionIds);
 
         /// <summary>
         /// Searches for affected fusion packages.

@@ -12,12 +12,12 @@ namespace Zapp.Deploy
         /// Announces a new version of a package.
         /// </summary>
         /// <param name="version">Version of the package.</param>
-        AnnounceResult Announce(PackageVersion version);
+        void Announce(PackageVersion version);
 
         /// <summary>
         /// Announces a new collection of package versions.
         /// </summary>
         /// <param name="versions">Collection of package versions.</param>
-        AnnounceResult Announce(IReadOnlyCollection<PackageVersion> versions);
+        void Announce(IEnumerable<PackageVersion> versions);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Moq;
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using Zapp.Fuse;
 using Zapp.Pack;
@@ -12,27 +13,7 @@ namespace Zapp.Deploy
     public class DeployServiceTests : TestBiolerplate<DeployService>
     {
         [Test]
-        public void Announce_WhenSyncAnnounceFailed_ReturnsInternalError()
-        {
-            var version = new PackageVersion("lib1", "1.0.0");
-
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.IsPackageVersionDeployed(version))
-                .Returns(true);
-
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Announce(version))
-                .Returns(false);
-
-            var sut = GetSystemUnderTest();
-
-            var result = sut.Announce(version);
-
-            Assert.That(result, Is.EqualTo(AnnounceResult.InternalError));
-        }
-
-        [Test]
-        public void Announce_WhenPackageIsNotDeployed_ReturnsNotFound()
+        public void Announce_WhenPackageIsNotDeployed_Throws()
         {
             var version = new PackageVersion("lib1", "1.0.0");
 
@@ -46,9 +27,7 @@ namespace Zapp.Deploy
 
             var sut = GetSystemUnderTest();
 
-            var result = sut.Announce(version);
-
-            Assert.That(result, Is.EqualTo(AnnounceResult.NotFound));
+            Assert.That(() => sut.Announce(version), Throws.InstanceOf<AggregateException>());
         }
 
         [Test]
@@ -70,12 +49,10 @@ namespace Zapp.Deploy
 
             var sut = GetSystemUnderTest();
 
-            var result = sut.Announce(version);
-
-            Assert.That(result, Is.EqualTo(AnnounceResult.Ok));
+            Assert.That(() => sut.Announce(version), Throws.Nothing);
 
             kernel.GetMock<IScheduleService>()
-                .Verify(m => m.Schedule(It.IsAny<IReadOnlyCollection<string>>(), true), Times.Exactly(1));
+                .Verify(m => m.ScheduleMultiple(It.IsAny<IEnumerable<string>>()), Times.Exactly(1));
         }
     }
 }

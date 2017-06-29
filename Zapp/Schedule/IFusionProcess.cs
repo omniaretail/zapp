@@ -14,6 +14,11 @@ namespace Zapp.Schedule
         string FusionId { get; }
 
         /// <summary>
+        /// Represents the state of the fusion.
+        /// </summary>
+        FusionProcessState State { get; }
+
+        /// <summary>
         /// Represents the timestamp when the process started.
         /// </summary>
         DateTime? StartedAt { get; }
@@ -34,20 +39,25 @@ namespace Zapp.Schedule
         PerformanceCounter MemoryCounter { get; }
 
         /// <summary>
-        /// Tries to spawn an instance of the process.
+        /// Announces the port of the process.
         /// </summary>
-        bool TrySpawn();
+        /// <param name="port">Port that was received from the process.</param>
+        void Announce(int port);
 
         /// <summary>
-        /// Tries to request the process to start.
+        /// Spawns the actual process for this fusion.
         /// </summary>
-        /// <param name="port">Port where the process is bound onto.</param>
-        bool TryRequestStart(int port);
+        void Spawn();
 
         /// <summary>
-        /// Tries to request the process to stop.
+        /// Runs the startup event on the process.
         /// </summary>
-        bool TryRequestStop();
+        void Startup();
+
+        /// <summary>
+        /// Runs the terminate event on the process.
+        /// </summary>
+        void Terminate();
 
         /// <summary>
         /// Called when the interceptors are informed.

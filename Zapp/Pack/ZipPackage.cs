@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using Zapp.Core.Clauses;
+using Zapp.Exceptions;
 
 namespace Zapp.Pack
 {
@@ -44,12 +45,11 @@ namespace Zapp.Pack
 
             try
             {
-
                 archive = new ZipArchive(contentStream, ZipArchiveMode.Read);
             }
             catch (Exception ex)
             {
-                throw new PackageException("Package not compatible.", version, ex);
+                throw new PackageException(PackageException.LoadingFailure, version, ex);
             }
 
             this.packageEntryFactory = packageEntryFactory;

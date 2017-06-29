@@ -192,9 +192,10 @@
     <Compile Include="Config\SyncConfig.cs" />
     <Compile Include="Config\ZappConfig.cs" />
     <Compile Include="Config\RestConfig.cs" />
-    <Compile Include="Deploy\AnnounceResult.cs" />
     <Compile Include="Deploy\DeployService.cs" />
     <Compile Include="Deploy\IDeployService.cs" />
+    <Compile Include="Exceptions\FusionException.cs" />
+    <Compile Include="Extensions\IEnumerableExtensions.cs" />
     <Compile Include="Fuse\FileFusionExtractor.cs" />
     <Compile Include="Fuse\FusionProcessConfigEntry.cs" />
     <Compile Include="Fuse\FusionProcessEntry.cs" />
@@ -215,7 +216,7 @@
     <Compile Include="Pack\IPackageFactory.cs" />
     <Compile Include="Pack\IPackService.cs" />
     <Compile Include="Pack\LazyStream.cs" />
-    <Compile Include="Pack\PackageException.cs" />
+    <Compile Include="Exceptions\PackageException.cs" />
     <Compile Include="Pack\PackageVersion.cs" />
     <Compile Include="Pack\PackDeployResult.cs" />
     <Compile Include="Pack\FilePackService.cs" />
@@ -257,6 +258,9 @@
       <Project>{0696f6e1-39d9-406a-a800-efae7422aff4}</Project>
       <Name>Zapp.Process</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Tools\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -45,18 +45,9 @@ namespace Zapp.Rest.Controllers
         [HttpPost, Route("api/clerk/announce/")]
         public StatusCodeResult Announce([FromBody]IReadOnlyCollection<PackageVersion> versions)
         {
-            var announceResult = deployService.Announce(versions);
+            deployService.Announce(versions);
 
-            switch (announceResult)
-            {
-                case AnnounceResult.Ok:
-                    return StatusCode(HttpStatusCode.OK);
-                case AnnounceResult.NotFound:
-                    return StatusCode(HttpStatusCode.NotFound);
-                default:
-                case AnnounceResult.InternalError:
-                    return StatusCode(HttpStatusCode.InternalServerError);
-            }
+            return StatusCode(HttpStatusCode.OK);
         }
     }
 }

@@ -59,7 +59,7 @@ namespace Zapp.Fuse
             {
                 archive.ExtractToDirectory(fusionDirectory);
 
-                logService.Info($"fusion {config.Id} extracted.");
+                logService.Info($"Fusion {config.Id} extracted.");
             }
         }
     }

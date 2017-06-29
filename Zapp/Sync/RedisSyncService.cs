@@ -2,8 +2,8 @@
 using StackExchange.Redis;
 using System;
 using Zapp.Config;
-using Zapp.Pack;
 using Zapp.Core.Clauses;
+using Zapp.Pack;
 
 namespace Zapp.Sync
 {
@@ -40,7 +40,7 @@ namespace Zapp.Sync
 
             multiplexer = ConnectionMultiplexer.Connect(config.ConnectionString);
 
-            logService.Info($"connected to: {config.ConnectionString}");
+            logService.Info($"Connected to redis on: {config.ConnectionString}");
         }
 
         /// <summary>

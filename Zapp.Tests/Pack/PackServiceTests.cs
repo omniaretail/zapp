@@ -1,6 +1,7 @@
 ﻿using AntPathMatching;
 using Ninject.Extensions.Factory;
 using NUnit.Framework;
+using Zapp.Exceptions;
 
 namespace Zapp.Pack
 {
@@ -23,9 +24,7 @@ namespace Zapp.Pack
 
             var version = new PackageVersion("shared", "v1.0.0.0");
 
-            var exc = Assert.Throws<PackageException>(() => sut.LoadPackage(version));
-
-            Assert.That(exc.Version, Is.EqualTo(version));
+            Assert.That(() => sut.LoadPackage(version), Throws.InstanceOf<PackageException>());
         }
     }
 }

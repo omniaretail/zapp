@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Zapp.Core.Clauses;
+using Zapp.Exceptions;
+using Zapp.Extensions;
 using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Schedule;
 using Zapp.Sync;
-using Zapp.Core.Clauses;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Zapp.Deploy
 {
@@ -44,7 +46,7 @@ namespace Zapp.Deploy
         /// <param name="version">Version of the package.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="version"/> is not set.</exception>
         /// <inheritdoc />
-        public AnnounceResult Announce(PackageVersion version) => Announce(new[] { version });
+        public void Announce(PackageVersion version) => Announce(new[] { version });
 
         /// <summary>
         /// Announces a new collection of package versions.
@@ -52,28 +54,29 @@ namespace Zapp.Deploy
         /// <param name="versions">Collection of package versions.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="versions"/> is not set.</exception>
         /// <inheritdoc />
-        public AnnounceResult Announce(IReadOnlyCollection<PackageVersion> versions)
+        public void Announce(IEnumerable<PackageVersion> versions)
         {
             Guard.ParamNotNull(versions, nameof(versions));
 
-            if (!versions.All(packService.IsPackageVersionDeployed))
-            {
-                return AnnounceResult.NotFound;
-            }
+            var exhausedVersions = versions.Exhaust();
 
-            if (!versions.All(syncService.Announce))
+            var nonExistingPackages = exhausedVersions
+                .Where(_ => !packService.IsPackageVersionDeployed(_))
+                .ToArray();
+
+            if (nonExistingPackages.Any())
             {
-                return AnnounceResult.InternalError;
+                var errors = nonExistingPackages
+                    .Select(_ => new PackageException(PackageException.NotFound, _));
+
+                throw new AggregateException(errors);
             }
 
             var affections = versions
-                .SelectMany(v => fusionService.GetAffectedFusions(v.PackageId))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .SelectMany(_ => fusionService.GetAffectedFusions(_.PackageId))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
 
-            scheduleService.Schedule(affections);
-
-            return AnnounceResult.Ok;
+            scheduleService.ScheduleMultiple(affections);
         }
     }
 }

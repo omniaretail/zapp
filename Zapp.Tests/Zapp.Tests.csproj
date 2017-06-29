@@ -174,7 +174,7 @@
     <Compile Include="Fuse\FlatFileFusionServiceTests.cs" />
     <Compile Include="Fuse\FusionMetaEntryTests.cs" />
     <Compile Include="Fuse\ZipFusionTests.cs" />
-    <Compile Include="Pack\PackageExceptionTests.cs" />
+    <Compile Include="Exceptions\PackageExceptionTests.cs" />
     <Compile Include="Pack\PackageVersionTests.cs" />
     <Compile Include="Pack\PackServiceTests.cs" />
     <Compile Include="Pack\ZipPackageTests.cs" />

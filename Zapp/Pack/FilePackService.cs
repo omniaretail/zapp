@@ -4,8 +4,9 @@ using System;
 using System.IO;
 using System.Linq;
 using Zapp.Config;
-using Zapp.Sync;
 using Zapp.Core.Clauses;
+using Zapp.Exceptions;
+using Zapp.Sync;
 
 namespace Zapp.Pack
 {
@@ -82,7 +83,7 @@ namespace Zapp.Pack
 
             if (string.IsNullOrEmpty(packageLocation))
             {
-                throw new PackageException("Package not found.", version);
+                throw new PackageException(PackageException.NotFound, version);
             }
 
             return packageFactory.CreateNew(version, File.OpenRead(packageLocation));

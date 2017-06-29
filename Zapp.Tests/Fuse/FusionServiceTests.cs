@@ -62,7 +62,7 @@ namespace Zapp.Fuse
         }
 
         [Test]
-        public void TryExtractFusion_WhenCalledWithKnownLibraries_ReturnsTrue()
+        public void ExtractMultiple_WhenCalledWithKnownLibraries_ReturnsTrue()
         {
             var version = new PackageVersion("library1", "1.0.0");
 
@@ -91,9 +91,7 @@ namespace Zapp.Fuse
 
             var sut = GetSystemUnderTest();
 
-            var result = sut.TryExtractFusion("test");
-
-            Assert.That(result, Is.EqualTo(true));
+            Assert.That(() => sut.ExtractMultiple(new[] { "test" }), Throws.Nothing);
 
             kernel.GetMock<ILog>()
                 .Verify(m => m.Debug(It.IsAny<string>()), Times.AtLeast(3));
@@ -106,7 +104,7 @@ namespace Zapp.Fuse
         }
 
         [Test]
-        public void TryExtractFusion_WhenCalledWithUnknownLibraries_ReturnsFalse()
+        public void ExtractMultiple_WhenCalledWithUnknownLibraries_Throws()
         {
             var version = new PackageVersion("library1", "1.0.0");
 
@@ -116,16 +114,11 @@ namespace Zapp.Fuse
 
             var sut = GetSystemUnderTest();
 
-            var result = sut.TryExtractFusion("test");
-
-            Assert.That(result, Is.EqualTo(false));
-
-            kernel.GetMock<ILog>()
-                .Verify(m => m.Warn(It.IsAny<string>()), Times.Exactly(1));
+            Assert.That(() => sut.ExtractMultiple(new[] { "test" }), Throws.InstanceOf<AggregateException>());
         }
 
         [Test]
-        public void TryExtractFusion_WhenCalledWithNonDeployedLibraries_ReturnsFalse()
+        public void ExtractMultiple_WhenCalledWithNonDeployedLibraries_Throws()
         {
             var version = new PackageVersion("library1", "1.0.0");
 
@@ -142,12 +135,7 @@ namespace Zapp.Fuse
 
             var sut = GetSystemUnderTest();
 
-            var result = sut.TryExtractFusion("test");
-
-            Assert.That(result, Is.EqualTo(false));
-
-            kernel.GetMock<ILog>()
-                .Verify(m => m.Warn(It.IsAny<string>()), Times.Exactly(1));
+            Assert.That(() => sut.ExtractMultiple(new[] { "test" }), Throws.InstanceOf<AggregateException>());
         }
     }
 }

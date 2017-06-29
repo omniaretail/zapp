@@ -1,6 +1,6 @@
 ﻿using log4net;
 using System;
-using Zapp.Pack;
+using Zapp.Fuse;
 using Zapp.Rest;
 using Zapp.Schedule;
 using Zapp.Sync;
@@ -16,7 +16,7 @@ namespace Zapp.Server
 
         private readonly IRestService apiService;
         private readonly ISyncService syncService;
-        private readonly IPackService packService;
+        private readonly IFusionService fusionService;
         private readonly IScheduleService scheduleService;
 
         /// <summary>
@@ -25,20 +25,21 @@ namespace Zapp.Server
         /// <param name="logService">Service used for logging.</param>
         /// <param name="apiService">Service used for outside communcation.</param>
         /// <param name="syncService">Service used for package-version synchronization.</param>
-        /// <param name="packService">Service used for packages.</param>
+        /// <param name="fusionService">Service used for extraction fusions.</param>
         /// <param name="scheduleService">Service used for scheduling fusions.</param>
         public ZappServer(
             ILog logService,
             IRestService apiService,
             ISyncService syncService,
-            IPackService packService,
+            IFusionService fusionService,
             IScheduleService scheduleService)
         {
             this.logService = logService;
 
             this.apiService = apiService;
             this.syncService = syncService;
-            this.packService = packService;
+
+            this.fusionService = fusionService;
             this.scheduleService = scheduleService;
         }
 
@@ -53,11 +54,12 @@ namespace Zapp.Server
                 syncService.Connect();
                 apiService.Listen();
 
+                fusionService.ExtractAll();
                 scheduleService.ScheduleAll();
             }
             catch (Exception ex)
             {
-                logService.Fatal("failed to start the server instance", ex);
+                logService.Fatal("Failed to start the server instance", ex);
 
                 throw;
             }

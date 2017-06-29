@@ -1,6 +1,7 @@
 ﻿using System;
+using Zapp.Pack;
 
-namespace Zapp.Pack
+namespace Zapp.Exceptions
 {
     /// <summary>
     /// Represents an implementation of <see cref="Exception"/> for package error(s).
@@ -8,6 +9,16 @@ namespace Zapp.Pack
     [Serializable]
     public class PackageException : Exception
     {
+        /// <summary>
+        /// Represents a message for a loading failure.
+        /// </summary>
+        public static readonly string LoadingFailure = "Package failed to load.";
+
+        /// <summary>
+        /// Represents a message for a non found package.
+        /// </summary>
+        public static readonly string NotFound = "Package not found.";
+
         /// <summary>
         /// Represents the version of the package.
         /// </summary>

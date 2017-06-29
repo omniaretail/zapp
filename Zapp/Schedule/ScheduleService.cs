@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Zapp.Config;
 using Zapp.Core.Clauses;
+using Zapp.Extensions;
 using Zapp.Fuse;
 
 namespace Zapp.Schedule
@@ -15,9 +16,7 @@ namespace Zapp.Schedule
     public class ScheduleService : IScheduleService, IDisposable
     {
         private static readonly TimeSpan waitForStartTimeout = TimeSpan.FromSeconds(30);
-        private static readonly TimeSpan waitForStartInterval = TimeSpan.FromSeconds(1);
-
-        private bool isGlobalExtractionCompleted = false;
+        private static readonly TimeSpan waitForAnnouncementInterval = TimeSpan.FromSeconds(1);
 
         private readonly ILog logService;
         private readonly IConfigStore configStore;
@@ -30,13 +29,13 @@ namespace Zapp.Schedule
 
         private IDictionary<string, IFusionProcess> processes;
 
+        private object syncLock;
+
         /// <summary>
         /// Represents the current running processes.
         /// </summary>
         /// <inheritdoc />
         public IReadOnlyCollection<IFusionProcess> Processes => processes?.Values?.ToList();
-
-        private static readonly object syncLock = new object();
 
         /// <summary>
         /// Initializes a new <see cref="ScheduleService"/>.
@@ -64,101 +63,56 @@ namespace Zapp.Schedule
             this.drainers = drainers.ToList();
             this.interceptors = interceptors.ToList();
 
+            syncLock = new object();
+
             processes = new SortedDictionary<string, IFusionProcess>(
                 StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
-        /// Schedules a collection of fusions
-        /// </summary>
-        /// <param name="fusionIds">Identities of the fusions.</param>
-        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
-        /// <exception cref="ArgumentNullException">Throw when <paramref name="fusionIds"/> is not set.</exception>
-        /// <exception cref="ArgumentException">Throw when one of the <paramref name="fusionIds"/> is not set.</exception>
-        /// <inheritdoc />
-        public void Schedule(IReadOnlyCollection<string> fusionIds, bool isExtractionRequired = true)
-        {
-            Guard.ParamNotNull(fusionIds, nameof(fusionIds));
-
-            foreach (string fusionId in fusionIds)
-            {
-                Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
-            }
-
-            lock (syncLock)
-            {
-                if (!isGlobalExtractionCompleted)
-                {
-                    logService.Info("Global extraction not completed, finishing that first.");
-
-                    if ((isGlobalExtractionCompleted = fusionService.TryExtract()))
-                    {
-                        logService.Info("Global extraction completed, scheduling all fusions.");
-
-                        ScheduleAll(isExtractionRequired: false);
-                    }
-                    else
-                    {
-                        logService.Fatal("Global extraction failed, waiting for next announcement.");
-                    }
-                }
-                else
-                {
-                    DrainAndStop(fusionIds);
-
-                    if (!isExtractionRequired || fusionService.TryExtractFusionBatch(fusionIds))
-                    {
-                        foreach (string fusionId in fusionIds)
-                        {
-                            Schedule(fusionId);
-                        }
-
-                        bool isFinished = WaitForProcessesToStartAsync()
-                            .GetAwaiter()
-                            .GetResult();
-
-                        if (isFinished)
-                        {
-                            foreach (var drainer in drainers)
-                            {
-                                try
-                                {
-                                    drainer.Resume();
-
-                                    logService.Info($"Drainer: resume {drainer.GetType().Name} finished.");
-                                }
-                                catch (Exception ex)
-                                {
-                                    logService.Error("Failed to run drainer for event Resume", ex);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            logService.Fatal("Failed to spawn/start fusion batch.");
-                        }
-                    }
-                    else
-                    {
-                        logService.Fatal("Failed to extraction fusion batch.");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Schedules all the configured fusions.
         /// </summary>
-        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
         /// <inheritdoc />
-        public void ScheduleAll(bool isExtractionRequired = true)
+        public void ScheduleAll()
         {
             var fusionIds = configStore.Value?.Fuse?.Fusions?
                 .OrderBy(f => f.Order)
                 .Select(f => f.Id)?
                 .ToList() ?? new List<string>();
 
-            Schedule(fusionIds, isExtractionRequired);
+            ScheduleMultiple(fusionIds);
+        }
+
+        /// <summary>
+        /// Schedules a collection of fusions
+        /// </summary>
+        /// <param name="fusionIds">Identities of the fusions.</param>
+        /// <exception cref="ArgumentNullException">Throw when <paramref name="fusionIds"/> is not set.</exception>
+        /// <inheritdoc />
+        public void ScheduleMultiple(IEnumerable<string> fusionIds)
+        {
+            Guard.ParamNotNull(fusionIds, nameof(fusionIds));
+
+            var exhausedFusionIds = fusionIds.Exhaust();
+
+            lock (syncLock)
+            {
+                var activeProcesses = GetActiveProcesses(exhausedFusionIds).Exhaust();
+
+                TerminateMultiple(activeProcesses); // drains and stops the services
+
+                fusionService.ExtractMultiple(exhausedFusionIds); // extracts the new fusions
+
+                var newProcesses = SpawnMultiple(exhausedFusionIds).Exhaust(); // spawns the services
+
+                WaitForAnnouncements(newProcesses).GetAwaiter().GetResult(); // wait for all port callbacks
+
+                StartupMultiple(newProcesses); // calls all the startups
+
+                HealthCheckMultiple(newProcesses); // asks for all the nurse statusses
+
+                ResumeAll(); // execute resume of drainers
+            }
         }
 
         /// <summary>
@@ -168,155 +122,162 @@ namespace Zapp.Schedule
         /// <param name="port">Port of the fusions' rest service.</param>
         /// <exception cref="ArgumentException">Throw when <paramref name="fusionId"/> is not set.</exception>
         /// <inheritdoc />
-        public bool TryAnnounce(string fusionId, int port)
+        public void Announce(string fusionId, int port)
         {
             Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
 
             var process = default(IFusionProcess);
 
-            if (!TryGetProcess(fusionId, out process))
+            if (!TryGetActiveProcess(fusionId, out process))
             {
-                return false;
+                throw new Exception();
             }
 
-            if (!process.TryRequestStart(port))
-            {
-                logService.Error($"Failed to start process for fusion: {fusionId}, no interceptors informed.");
-                return false;
-            }
-
-            foreach (var interceptor in interceptors)
-            {
-                try
-                {
-                    interceptor.OnStartupCalled(process);
-
-                    logService.Info($"Interceptor: {interceptor.GetType().Name} finished.");
-                }
-                catch (Exception ex)
-                {
-                    logService.Error("Failed to run interceptor for event OnStartupCalled", ex);
-                }
-            }
-
-            process.OnInterceptorsInformed();
-
-            return true;
+            process.Announce(port);
         }
 
-        private void Schedule(string fusionId)
-        {
-            StopProcess(fusionId);
-            StartProcess(fusionId);
-        }
-
-        private void StartProcess(string fusionId)
-        {
-            var process = fusionProcessFactory.CreateNew(fusionId);
-
-            if (!process.TrySpawn())
-            {
-                logService.Error($"Failed to spawn process for fusion: {fusionId}, added anyway.");
-            }
-
-            processes.Add(fusionId, process);
-        }
-
-        private void StopProcess(string fusionId)
-        {
-            var process = default(IFusionProcess);
-
-            if (!TryGetProcess(fusionId, out process))
-            {
-                return;
-            }
-
-            if (!process.TryRequestStop())
-            {
-                logService.Error($"Failed to stop process for fusion: {fusionId}, removed/disposed anyway.");
-            }
-
-            processes.Remove(fusionId);
-
-            (process as IDisposable).Dispose();
-        }
-
-        private void DrainAndStop(IReadOnlyCollection<string> fusionIds)
-        {
-            var processes = GetProcesses(fusionIds).ToList();
-
-            if (processes.Any())
-            {
-                foreach (var drainer in drainers)
-                {
-                    try
-                    {
-                        drainer.Drain(processes);
-
-                        logService.Info($"Drainer: {drainer.GetType().Name} finished.");
-                    }
-                    catch (Exception ex)
-                    {
-                        logService.Error("Failed to run drainer.", ex);
-                    }
-                }
-            }
-
-            foreach (string fusionId in fusionIds)
-            {
-                StopProcess(fusionId);
-            }
-        }
-
-        private void StopProcesses()
-        {
-            lock (syncLock)
-            {
-                var fusionIds = processes?.Keys?.ToList();
-
-                DrainAndStop(fusionIds);
-            }
-        }
-
-        private async Task<bool> WaitForProcessesToStartAsync()
-        {
-            var startedAt = DateTime.UtcNow;
-
-            var isCompleted = false;
-
-            while (!isCompleted &&
-                (DateTime.UtcNow - startedAt) < waitForStartTimeout)
-            {
-                isCompleted = !processes.Values
-                    .Where(p => p.StartedAt == null)
-                    .Any();
-
-                if (!isCompleted)
-                {
-                    await Task.Delay(waitForStartInterval);
-                }
-            }
-
-            return isCompleted;
-        }
-
-        private bool TryGetProcess(string fusionId, out IFusionProcess process)
+        private bool TryGetActiveProcess(string fusionId, out IFusionProcess process)
         {
             process = default(IFusionProcess);
 
             return processes?.TryGetValue(fusionId, out process) == true;
         }
 
-        private IEnumerable<IFusionProcess> GetProcesses(IReadOnlyCollection<string> fusionIds)
+        private IEnumerable<IFusionProcess> GetActiveProcesses(IEnumerable<string> fusionIds)
         {
             var current = default(IFusionProcess);
+            var exhausedFusionIds = fusionIds.Exhaust();
 
-            foreach (string fusionId in fusionIds)
+            foreach (string fusionId in exhausedFusionIds)
             {
-                if (TryGetProcess(fusionId, out current))
+                if (TryGetActiveProcess(fusionId, out current))
                 {
                     yield return current;
                 }
+            }
+        }
+
+        private void StartupMultiple(params IFusionProcess[] processes)
+        {
+            foreach (var process in processes)
+            {
+                Startup(process);
+            }
+        }
+
+        private void Startup(IFusionProcess process)
+        {
+            process.Startup();
+
+            foreach (var interceptor in interceptors)
+            {
+                interceptor.OnStartupCalled(process);
+            }
+
+            process.OnInterceptorsInformed();
+        }
+
+        private IEnumerable<IFusionProcess> SpawnMultiple(params string[] fusionIds)
+        {
+            foreach (var fusionId in fusionIds)
+            {
+                yield return Spawn(fusionId);
+            }
+        }
+
+        private IFusionProcess Spawn(string fusionId)
+        {
+            var process = fusionProcessFactory.CreateNew(fusionId);
+
+            process.Spawn();
+
+            processes.Add(fusionId, process);
+
+            return process;
+        }
+
+        private async Task WaitForAnnouncements(params IFusionProcess[] processes)
+        {
+            do
+            {
+                var hasDeadProcesses = processes
+                    .Any(_ => _.State == FusionProcessState.Dead);
+
+                if (hasDeadProcesses)
+                {
+                    throw new  Exception();
+                }
+
+                await Task.Delay(waitForAnnouncementInterval);
+            }
+            while (!processes.All(_ => _.State == FusionProcessState.Announced));
+        }
+
+        private void HealthCheckMultiple(params IFusionProcess[] processes)
+        {
+            foreach(var process in processes)
+            {
+                HealthCheck(process);
+            }
+        }
+
+        private void HealthCheck(IFusionProcess process)
+        {
+            // todo: create!
+        }
+
+        private void TerminateAll()
+        {
+            lock (syncLock)
+            {
+                var activeProcesses = processes?.Values?.ToArray() ?? new IFusionProcess[0];
+
+                TerminateMultiple(activeProcesses);
+            }
+        }
+
+        private void TerminateMultiple(params IFusionProcess[] processes)
+        {
+            Drain(processes);
+
+            foreach (var process in processes)
+            {
+                Terminate(process);
+            }
+        }
+
+        private void Terminate(IFusionProcess process)
+        {
+            try
+            {
+                process.Terminate();
+
+                (process as IDisposable).Dispose();
+            }
+            finally
+            {
+                processes?.Remove(process.FusionId);
+            }
+        }
+
+        private void Drain(params IFusionProcess[] processes)
+        {
+            if (!processes.Any())
+            {
+                return;
+            }
+
+            foreach (var drainer in drainers)
+            {
+                drainer.Drain(processes);
+            }
+        }
+
+        private void ResumeAll()
+        {
+            foreach (var drainer in drainers)
+            {
+                drainer.Resume();
             }
         }
 
@@ -327,7 +288,7 @@ namespace Zapp.Schedule
         {
             try
             {
-                StopProcesses();
+                TerminateAll();
             }
             catch (Exception ex)
             {
