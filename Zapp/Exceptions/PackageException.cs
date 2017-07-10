@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Serialization;
 using Zapp.Pack;
 
 namespace Zapp.Exceptions
@@ -7,7 +8,7 @@ namespace Zapp.Exceptions
     /// Represents an implementation of <see cref="Exception"/> for package error(s).
     /// </summary>
     [Serializable]
-    public class PackageException : Exception
+    public class PackageException : Exception, ISerializable
     {
         /// <summary>
         /// Represents a message for a loading failure.
@@ -54,6 +55,24 @@ namespace Zapp.Exceptions
             : base(message, innerException)
         {
             Version = version ?? new PackageVersion("?", "?");
+        }
+
+        /// <summary>
+        /// Initializes a new <see cref="PackageException"/> for the <see cref="ISerializable"/> interface.
+        /// </summary>
+        /// <inheritDoc />
+        public PackageException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+            Version = info.GetValue(nameof(Version), typeof(PackageVersion)) as PackageVersion;
+        }
+
+        /// <inheritdoc />
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            base.GetObjectData(info, context);
+
+            info.AddValue(nameof(Version), Version);
         }
     }
 }

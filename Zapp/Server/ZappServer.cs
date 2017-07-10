@@ -1,5 +1,7 @@
 ﻿using log4net;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Zapp.Fuse;
 using Zapp.Rest;
 using Zapp.Schedule;
@@ -46,16 +48,19 @@ namespace Zapp.Server
         /// <summary>
         /// Starts the current instance of <see cref="ZappServer"/> and it's dependencies.
         /// </summary>
+        /// <param name="token">Token used to cancel the startup.</param>
         /// <inheritdoc />
-        public void Start()
+        public async Task StartAsync(CancellationToken token)
         {
             try
             {
                 syncService.Connect();
+
                 apiService.Listen();
 
-                fusionService.ExtractAll();
-                scheduleService.ScheduleAll();
+                fusionService.ExtractAll(token);
+
+                await scheduleService.ScheduleAllAsync(token);
             }
             catch (Exception ex)
             {

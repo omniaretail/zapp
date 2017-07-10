@@ -1,11 +1,12 @@
 ﻿using AntPathMatching;
+using EnsureThat;
 using log4net;
 using System;
 using System.IO;
 using System.Linq;
 using Zapp.Config;
-using Zapp.Core.Clauses;
 using Zapp.Exceptions;
+using Zapp.Extensions;
 using Zapp.Sync;
 
 namespace Zapp.Pack
@@ -64,7 +65,7 @@ namespace Zapp.Pack
         /// <param name="version">Version of the package.</param>
         public bool IsPackageVersionDeployed(PackageVersion version)
         {
-            Guard.ParamNotNull(version, nameof(version));
+            EnsureArg.IsNotNull(version, nameof(version));
 
             return !string.IsNullOrEmpty(LocatePackage(version));
         }
@@ -77,7 +78,7 @@ namespace Zapp.Pack
         /// <inheritdoc />
         public IPackage LoadPackage(PackageVersion version)
         {
-            Guard.ParamNotNull(version, nameof(version));
+            EnsureArg.IsNotNull(version, nameof(version));
 
             var packageLocation = LocatePackage(version);
 
@@ -87,33 +88,6 @@ namespace Zapp.Pack
             }
 
             return packageFactory.CreateNew(version, File.OpenRead(packageLocation));
-        }
-
-        /// <summary>
-        /// Deploys the new package.
-        /// </summary>
-        /// <param name="version">Version of the package.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="version"/> is not set.</exception>
-        /// <inheritdoc />
-        public PackDeployResult Deploy(PackageVersion version)
-        {
-            Guard.ParamNotNull(version, nameof(version));
-
-            var package = LocatePackage(version);
-
-            if (string.IsNullOrEmpty(package))
-            {
-                return PackDeployResult.PackageNotFound;
-            }
-
-            bool isSynced = syncService.Announce(version);
-
-            if (!isSynced)
-            {
-                return PackDeployResult.SyncFailed;
-            }
-
-            return PackDeployResult.Success;
         }
 
         private string LocatePackage(PackageVersion version)
@@ -128,11 +102,11 @@ namespace Zapp.Pack
 
             var results = directorySearcher
                 .SearchRecursively(packageRootDir, true)?
-                .ToList();
+                .Stale();
 
-            return (results?.Count != 1)
-                ? null
-                : results.SingleOrDefault();
+            return results.Count() == 1 
+                ? results.FirstOrDefault()
+                : null;
         }
     }
 }

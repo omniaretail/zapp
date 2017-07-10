@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using EnsureThat;
+using log4net;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -6,10 +7,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Zapp.Catalogue;
 using Zapp.Config;
 using Zapp.Core;
-using Zapp.Core.Clauses;
-using Zapp.Core.Http;
+using Zapp.Core.Extensions;
+using Zapp.Exceptions;
 using Zapp.Fuse;
 using WinProcess = System.Diagnostics.Process;
 
@@ -18,7 +22,7 @@ namespace Zapp.Schedule
     /// <summary>
     /// Represents an implementation of <see cref="IFusionProcess"/> for windows processes.
     /// </summary>
-    public class FusionProcess : IFusionProcess, IDisposable
+    public sealed class FusionProcess : IFusionProcess, IDisposable
     {
         private const int maxNrOfRespawns = 10;
         private static readonly TimeSpan defaultProcessTimeout = TimeSpan.FromSeconds(20);
@@ -28,6 +32,9 @@ namespace Zapp.Schedule
 
         private readonly ILog logService;
         private readonly IConfigStore configStore;
+        private readonly IFusionCatalogue fusionCatalogue;
+
+        private readonly IHttpFailurePolicy httpFailurePolicy;
 
         private WinProcess process;
         private IDictionary<string, string> metaInfo;
@@ -76,20 +83,27 @@ namespace Zapp.Schedule
         /// <summary>
         /// Initializes a new <see cref="FusionProcess"/>.
         /// </summary>
+        /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Store used for loading configuration.</param>
-        /// <param name="fusionId">Identity of the fusion.</param>
+        /// <param name="fusionCatalogue">Catalogue used to resolve locations of fusions.</param>
+        /// <param name="httpFailurePolicy">Failure policy used for http request(s).</param>
         public FusionProcess(
             string fusionId,
             ILog logService,
-            IConfigStore configStore)
+            IConfigStore configStore,
+            IFusionCatalogue fusionCatalogue,
+            IHttpFailurePolicy httpFailurePolicy)
         {
-            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
+            EnsureArg.IsNotNullOrEmpty(fusionId, nameof(fusionId));
 
             FusionId = fusionId;
 
             this.logService = logService;
             this.configStore = configStore;
+            this.fusionCatalogue = fusionCatalogue;
+
+            this.httpFailurePolicy = httpFailurePolicy;
 
             process = new WinProcess();
 
@@ -107,35 +121,12 @@ namespace Zapp.Schedule
         {
             if (State == FusionProcessState.None)
             {
-                var fusionDir = configStore.Value?.Fuse?
-                    .GetActualFusionDirectory(FusionId);
-
-                metaInfo = LoadMetaInfo(fusionDir);
-
-                var executableName = Path.Combine(fusionDir, metaInfo[FusionMetaEntry.ExecutableInfoKey]);
-
-                process.StartInfo.Verb = "runas";
-                process.StartInfo.FileName = executableName;
-                process.StartInfo.RedirectStandardOutput = false;
-                process.StartInfo.RedirectStandardError = false;
-
-                var parentId = WinProcess.GetCurrentProcess().Id;
-                var parentPort = configStore.Value?.Rest?.Port;
-
-                process.StartInfo.EnvironmentVariables.Add(ZappVariables.FusionIdEnvKey, FusionId);
-                process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentProcessIdEnvKey, Convert.ToString(parentId));
-                process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentPortEnvKey, Convert.ToString(parentPort));
-
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.CreateNoWindow = true;
-
-                process.EnableRaisingEvents = true;
-                process.Exited += (s, e) => OnExited();
+                SetupProcess(process);
             }
 
             if (process?.Start() != true)
             {
-                throw new Exception();
+                throw new ScheduleException(null, FusionId); // todo: add message
             }
 
             CpuCounter.InstanceName = process.ProcessName;
@@ -159,26 +150,28 @@ namespace Zapp.Schedule
         /// <summary>
         /// Runs the startup event on the process.
         /// </summary>
+        /// <param name="token">Token used to cancel the http request.</param>
         /// <inheritdoc />
-        public void Startup()
+        public async Task StartupAsync(CancellationToken token)
         {
             using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
-                var isStartExecuted = client.ExpectOk(startupAction); // todo: throw if not 200
+                await client.GetWithFailurePolicyAsync(startupAction, httpFailurePolicy, token);
             }
         }
 
         /// <summary>
         /// Runs the terminate event on the process.
         /// </summary>
+        /// <param name="token">Token used to cancel the http request.</param>
         /// <inheritdoc />
-        public void Terminate()
+        public async Task TerminateAsync(CancellationToken token)
         {
             isAutoRestartEnabled = false;
 
             using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
-                var isTeardownExecuted = client.ExpectOk(teardownAction); // todo: throw if not 200
+                await client.GetWithFailurePolicyAsync(teardownAction, httpFailurePolicy, token);
             }
         }
 
@@ -202,6 +195,34 @@ namespace Zapp.Schedule
 
             nrOfRespawns++;
             Spawn();
+        }
+
+        private void SetupProcess(WinProcess setupProcess)
+        {
+            var processRootDirectory = fusionCatalogue
+                .GetActiveLocation(FusionId);
+
+            metaInfo = LoadMetaInfo(processRootDirectory);
+
+            var executableName = Path.Combine(processRootDirectory, metaInfo[FusionMetaEntry.ExecutableInfoKey]);
+
+            setupProcess.StartInfo.Verb = "runas";
+            setupProcess.StartInfo.FileName = executableName;
+            setupProcess.StartInfo.RedirectStandardOutput = false;
+            setupProcess.StartInfo.RedirectStandardError = false;
+
+            var parentId = WinProcess.GetCurrentProcess().Id;
+            var parentPort = configStore.Value?.Rest?.Port;
+
+            setupProcess.StartInfo.EnvironmentVariables.Add(ZappVariables.FusionIdEnvKey, FusionId);
+            setupProcess.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentProcessIdEnvKey, Convert.ToString(parentId));
+            setupProcess.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentPortEnvKey, Convert.ToString(parentPort));
+
+            setupProcess.StartInfo.UseShellExecute = false;
+            setupProcess.StartInfo.CreateNoWindow = true;
+
+            setupProcess.EnableRaisingEvents = true;
+            setupProcess.Exited += (s, e) => OnExited();
         }
 
         private IDictionary<string, string> LoadMetaInfo(string fusionDir)

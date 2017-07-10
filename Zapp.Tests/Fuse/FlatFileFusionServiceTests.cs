@@ -1,11 +1,12 @@
 ﻿using Ninject;
 using Ninject.MockingKernel.Moq;
 using NUnit.Framework;
+using System;
 
 namespace Zapp.Fuse
 {
     [TestFixture]
-    public class FlatFileFusionServiceTests
+    public class FlatFileFusionServiceTests : IDisposable
     {
         private MoqMockingKernel kernel;
 
@@ -17,6 +18,12 @@ namespace Zapp.Fuse
             kernel = new MoqMockingKernel();
 
             sut = kernel.Get<FusionService>();
+        }
+
+        public void Dispose()
+        {
+            kernel?.Dispose();
+            kernel = null;
         }
     }
 }

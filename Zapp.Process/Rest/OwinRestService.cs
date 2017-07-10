@@ -1,4 +1,5 @@
-﻿using Microsoft.Owin.Hosting;
+﻿using EnsureThat;
+using Microsoft.Owin.Hosting;
 using Ninject;
 using Ninject.Extensions.ChildKernel;
 using Ninject.Web.Common.OwinHost;
@@ -10,7 +11,6 @@ using System.Net;
 using System.Net.Http.Formatting;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
-using Zapp.Core.Clauses;
 using Zapp.Core.Owin;
 
 namespace Zapp.Process.Rest
@@ -18,7 +18,7 @@ namespace Zapp.Process.Rest
     /// <summary>
     /// Represents an implementation of <see cref="IRestService"/> which uses the owin rest-api.
     /// </summary>
-    public class OwinRestService : IRestService, IDisposable
+    public sealed class OwinRestService : IRestService, IDisposable
     {
         private readonly IAssembliesResolver assembliesResolver;
 
@@ -48,7 +48,8 @@ namespace Zapp.Process.Rest
         /// <inheritdoc />
         public void Listen(int port)
         {
-            Guard.ParamNotOutOfRange(port, IPEndPoint.MinPort, IPEndPoint.MaxPort, nameof(port));
+            EnsureArg.IsGt(port, IPEndPoint.MinPort, nameof(port));
+            EnsureArg.IsLt(port, IPEndPoint.MaxPort, nameof(port));
 
             owinInstance = WebApp.Start(new StartOptions { Port = port }, Startup);
         }

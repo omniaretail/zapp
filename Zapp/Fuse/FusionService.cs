@@ -1,17 +1,16 @@
-﻿using AntPathMatching;
+﻿using EnsureThat;
 using log4net;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Zapp.Config;
-using Zapp.Core.Clauses;
-using Zapp.Core.NuGet;
+using Zapp.Deploy;
 using Zapp.Exceptions;
+using Zapp.Extensions;
 using Zapp.Pack;
-using Zapp.Process;
 using Zapp.Sync;
 
 namespace Zapp.Fuse
@@ -24,97 +23,90 @@ namespace Zapp.Fuse
         private readonly ILog logService;
 
         private readonly IConfigStore configStore;
-
-        private readonly IPackService packService;
         private readonly ISyncService syncService;
-
-        private readonly IAnt entryFilter;
 
         private readonly IFusionFactory fusionFactory;
         private readonly IFusionExtracter fusionExtractor;
+        private readonly IFusionBuilder fusionBuilder;
 
-        private readonly IReadOnlyCollection<IFusionFilter> fusionFilters;
-        private readonly IReadOnlyCollection<IFusionInterceptor> fusionInterceptors;
-
-        private readonly INuGetPackageResolver nuGetPackageResolver;
-        private readonly IFrameworkPackageEntryFactory frameworkPackageEntryFactory;
-
-        private IReadOnlyCollection<FileInfo> defaultEntries;
+        private readonly IDeployAnnouncementFactory announcementFactory;
+        private readonly IPackageVersionValidator packageVersionValidator;
 
         /// <summary>
         /// Initializes a new <see cref="FusionService"/>.
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Store used for loading configuration.</param>
-        /// <param name="packService">Service used for loading packages.</param>
         /// <param name="syncService">Service used for synchronization of package versions.</param>
-        /// <param name="antFactory">Factory used for creating <see cref="IAnt"/> instances.</param>
         /// <param name="fusionFactory">Factory used for creating <see cref="IFusion"/> instances.</param>
-        /// <param name="fusionExtractor">Extracttor used for extracting streams of fusions.</param>
-        /// <param name="fusionFilters">Filters used for decorating fusion entries.</param>
-        /// <param name="fusionInterceptors">Interceptors used for adding fusion entries.</param>
-        /// <param name="nuGetPackageResolver">Resolver used to resolve NuGet packages.</param>
-        /// <param name="frameworkPackageEntryFactory">Factory used for creati9ng <see cref="IFrameworkPackageEntry"/> instances.</param>
+        /// <param name="fusionExtractor">Extractor used for extracting streams of fusions.</param>
+        /// <param name="fusionBuilder">Builder used to build a <see cref="IFusion"/> before it's extracted.</param>
+        /// <param name="announcementFactory">Factory used for creating instances of <see cref="IDeployAnnouncement"/>.</param>
+        /// <param name="packageVersionValidator">Validator used for validating <see cref="PackageVersion"/> availability.</param>
         public FusionService(
             ILog logService,
             IConfigStore configStore,
-            IPackService packService,
             ISyncService syncService,
-            IAntFactory antFactory,
             IFusionFactory fusionFactory,
             IFusionExtracter fusionExtractor,
-            IEnumerable<IFusionFilter> fusionFilters,
-            IEnumerable<IFusionInterceptor> fusionInterceptors,
-            INuGetPackageResolver nuGetPackageResolver,
-            IFrameworkPackageEntryFactory frameworkPackageEntryFactory)
+            IFusionBuilder fusionBuilder,
+            IDeployAnnouncementFactory announcementFactory,
+            IPackageVersionValidator packageVersionValidator)
         {
             this.logService = logService;
 
             this.configStore = configStore;
-
-            this.packService = packService;
             this.syncService = syncService;
 
             this.fusionFactory = fusionFactory;
             this.fusionExtractor = fusionExtractor;
+            this.fusionBuilder = fusionBuilder;
 
-            this.fusionFilters = fusionFilters.ToList();
-            this.fusionInterceptors = fusionInterceptors.ToList();
-
-            this.nuGetPackageResolver = nuGetPackageResolver;
-            this.frameworkPackageEntryFactory = frameworkPackageEntryFactory;
-
-            entryFilter = antFactory.CreateNew(configStore?.Value?.Fuse?.EntryPattern);
-            defaultEntries = GetDefaultEntries();
+            this.announcementFactory = announcementFactory;
+            this.packageVersionValidator = packageVersionValidator;
         }
 
         /// <summary>
-        /// Extracts all fusions.
+        /// Extracts all configured fusions.
         /// </summary>
+        /// <param name="token">Token of cancellation.</param>
         /// <inheritdoc />
         /// <exception cref="AggregateException">Throw when one or more fusions failed to extract.</exception>
-        public void ExtractAll()
+        public void ExtractAll(CancellationToken token)
         {
             var fusionIds = configStore.Value?.Fuse?.Fusions?
-                .Select(f => f.Id)?
-                .ToList() ?? new List<string>();
+                .Select(_ => _.Id)?
+                .Stale() ?? new string[0];
 
-            ExtractMultiple(fusionIds);
+            var announcement = announcementFactory
+                .CreateNew(fusionIds);
+
+            Extract(announcement, token);
         }
 
         /// <summary>
-        /// Extracts multiple fusions.
+        /// Extracts a deploy anncouncement.
         /// </summary>
-        /// <param name="fusionIds">Identities of the fusion.</param>
+        /// <param name="announcement">The announcement that needs to be extracted.</param>
+        /// <param name="token">Token of cancellation.</param>
         /// <inheritdoc />
         /// <exception cref="AggregateException">Throw when one or more fusions failed to extract.</exception>
-        public void ExtractMultiple(IEnumerable<string> fusionIds)
+        public void Extract(IDeployAnnouncement announcement, CancellationToken token)
         {
-            Parallel.ForEach(fusionIds, (_, state) =>
+            EnsureArg.IsNotNull(announcement, nameof(announcement));
+
+            var opts = new ParallelOptions
+            {
+                CancellationToken = token
+            };
+
+            var fusionIds = announcement.GetFusionIds();
+
+            Parallel.ForEach(fusionIds, opts, (_, state) =>
             {
                 try
                 {
-                    ExtractFusion(_);
+                    ExtractFusion(_, announcement);
                 }
                 catch (Exception ex)
                 {
@@ -130,14 +122,13 @@ namespace Zapp.Fuse
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <inheritdoc />
-        public IReadOnlyCollection<string> GetAffectedFusions(string packageId)
+        public IEnumerable<string> GetAffectedFusions(string packageId)
         {
-            Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
+            EnsureArg.IsNotNullOrEmpty(packageId, nameof(packageId));
 
             return configStore.Value?.Fuse?.Fusions?
-                .Where(f => f.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))?
-                .Select(f => f.Id)?
-                .ToList() ?? new List<string>();
+                .Where(_ => _.PackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase))?
+                .Select(_ => _.Id) ?? new string[0];
         }
 
         /// <summary>
@@ -146,67 +137,40 @@ namespace Zapp.Fuse
         /// <param name="fusionId">Identity of the fusion.</param>
         /// <exception cref="ArgumentException">Throw when <paramref name="fusionId"/> is not set.</exception>
         /// <inheritdoc />
-        public IReadOnlyCollection<PackageVersion> GetPackageVersions(string fusionId)
+        public IEnumerable<PackageVersion> GetPackageVersions(string fusionId) // todo make this async somehow..
         {
-            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
+            EnsureArg.IsNotNullOrEmpty(fusionId, nameof(fusionId));
 
             return GetFusionConfig(fusionId)?.PackageIds?
-                .Select(p => new PackageVersion(p, syncService.Sync(p)))?
-                .ToList() ?? new List<PackageVersion>();
+                .Select(_ => new PackageVersion(_, syncService.GetVersionAsync(_).Result)) ?? new PackageVersion[0];
         }
 
-        private void ExtractFusion(string fusionId)
+        private void ExtractFusion(string fusionId, IDeployAnnouncement announcement)
         {
-            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
+            EnsureArg.IsNotNullOrEmpty(fusionId, nameof(fusionId));
+            EnsureArg.IsNotNull(announcement, nameof(announcement));
 
             var fusionConfig = GetFusionConfig(fusionId);
-            var packageVersions = GetPackageVersions(fusionConfig.Id);
 
-            var invalidPackages = packageVersions
-                .Where(_ =>
-                    _.IsUnknown ||
-                    !packService.IsPackageVersionDeployed(_)
-                ).ToArray();
+            var packageVersions = announcement
+                .GetPackageVersions(fusionConfig.Id)
+                .Stale();
 
-            if (invalidPackages.Any())
-            {
-                var errors = invalidPackages
-                    .Select(_ => new PackageException(PackageException.NotFound, _));
-
-                throw new AggregateException(errors);
-            }
+            packageVersionValidator
+                .ConfirmAvailability(packageVersions);
 
             using (var packageStream = new MemoryStream())
             {
-                var fusion = fusionFactory.CreateNew(packageStream);
-                var packages = default(List<IPackage>);
+                var fusion = fusionFactory
+                    .CreateNew(packageStream);
 
                 try
                 {
-                    packages = packageVersions
-                        .Select(_ => packService.LoadPackage(_))
-                        .ToList();
-
-                    var entries = MashEntries(GenerateDefaultEntries(fusionConfig), packages);
-
-                    foreach (var entry in entries)
-                    {
-                        AddEntryToFusion(fusion, entry, fusionConfig);
-
-                        logService.Debug($"Entry {entry.Name} added to fusion: {fusionId}");
-                    }
+                    fusionBuilder.Build(fusionConfig, fusion, packageVersions);
                 }
                 finally
                 {
                     (fusion as IDisposable)?.Dispose();
-
-                    if (packages != null)
-                    {
-                        foreach (var package in packages)
-                        {
-                            (package as IDisposable)?.Dispose();
-                        }
-                    }
                 }
 
                 using (var packageStreamReadable = new MemoryStream(packageStream.ToArray()))
@@ -219,7 +183,7 @@ namespace Zapp.Fuse
         private FusePackConfig GetFusionConfig(string fusionId)
         {
             var result = configStore.Value?.Fuse?.Fusions?
-                .SingleOrDefault(f => string.Equals(f.Id, fusionId, StringComparison.OrdinalIgnoreCase));
+                .SingleOrDefault(_ => string.Equals(_.Id, fusionId, StringComparison.OrdinalIgnoreCase));
 
             if (result == null)
             {
@@ -227,82 +191,6 @@ namespace Zapp.Fuse
             }
 
             return result;
-        }
-
-        private void AddEntryToFusion(
-            IFusion fusion,
-            IPackageEntry entry,
-            FusePackConfig config)
-        {
-            foreach (var filter in fusionFilters)
-            {
-                filter.BeforeAddEntry(config, entry);
-            }
-
-            fusion.AddEntry(entry);
-        }
-
-        private IReadOnlyCollection<IPackageEntry> MashEntries(
-            IReadOnlyCollection<IPackageEntry> standardEntries,
-            IReadOnlyCollection<IPackage> packages)
-        {
-            return standardEntries.Concat(packages
-                .SelectMany(p => p.GetEntries())
-                .Where(e => entryFilter.IsMatch(e.Name)))
-                .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(e => e.FirstOrDefault())
-                .ToList();
-        }
-
-        private IReadOnlyCollection<IPackageEntry> GenerateDefaultEntries(FusePackConfig fusionConfig)
-        {
-            var interceptors = fusionInterceptors
-                .Select(e => e.GetEntries(fusionConfig))
-                .Where(e => e != null)
-                .SelectMany(e => e);
-
-            return defaultEntries
-                .Select(f => new LazyPackageEntry(f.Name, new LazyStream(() => f.OpenRead())))
-                .Concat(frameworkPackageEntryFactory
-                    .CreateNew()
-                    .Cast<IPackageEntry>())
-                .Concat(interceptors)
-                .ToList();
-        }
-
-        private IReadOnlyCollection<FileInfo> GetDefaultEntries()
-        {
-            var assembly = typeof(ZappProcessModule).Assembly;
-
-            var references = nuGetPackageResolver
-                .GetPackageIds(assembly)
-                .Select(id => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{id}.dll"))
-                .Where(File.Exists)
-                .SelectMany(e => GetAssemblyReferences(e).Concat(new[] { e }))
-                .Concat(GetAssemblyReferences(assembly))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(File.Exists)
-                .Select(e => new FileInfo(e).Name)
-                .ToList();
-
-            return Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll")
-                .Select(f => new FileInfo(f))
-                .Where(i => references.Contains(i.Name, StringComparer.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        private string GetReferencePath(string fileName) => Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, fileName);
-
-        private IReadOnlyCollection<string> GetAssemblyReferences(string assemblyPath) =>
-            GetAssemblyReferences(Assembly.ReflectionOnlyLoadFrom(assemblyPath));
-
-        private IReadOnlyCollection<string> GetAssemblyReferences(Assembly assembly)
-        {
-            return assembly
-                .GetReferencedAssemblies()
-                .Select(p => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"{p.Name}.dll"))
-                .ToList();
         }
     }
 }

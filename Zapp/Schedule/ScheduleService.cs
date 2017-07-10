@@ -1,10 +1,13 @@
-﻿using log4net;
+﻿using EnsureThat;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Zapp.Config;
-using Zapp.Core.Clauses;
+using Zapp.Deploy;
+using Zapp.Exceptions;
 using Zapp.Extensions;
 using Zapp.Fuse;
 
@@ -13,9 +16,11 @@ namespace Zapp.Schedule
     /// <summary>
     /// Represents a implementation of <see cref="IScheduleService"/> used for process orchestration.
     /// </summary>
-    public class ScheduleService : IScheduleService, IDisposable
+    public sealed class ScheduleService : IScheduleService, IDisposable
     {
-        private static readonly TimeSpan waitForStartTimeout = TimeSpan.FromSeconds(30);
+        private const int nrOfSimultaneousOperations = 1;
+
+        private static readonly TimeSpan waitForAnnouncementTimeout = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan waitForAnnouncementInterval = TimeSpan.FromSeconds(1);
 
         private readonly ILog logService;
@@ -23,19 +28,20 @@ namespace Zapp.Schedule
         private readonly IFusionService fusionService;
 
         private readonly IFusionProcessFactory fusionProcessFactory;
+        private readonly IDeployAnnouncementFactory announcementFactory;
 
-        private readonly IEnumerable<IFusionProcessDrainer> drainers;
+        private readonly IReadOnlyCollection<IFusionProcessDrainer> drainers;
         private readonly IReadOnlyCollection<IFusionProcessInterceptor> interceptors;
 
         private IDictionary<string, IFusionProcess> processes;
 
-        private object syncLock;
+        private SemaphoreSlim syncLock;
 
         /// <summary>
         /// Represents the current running processes.
         /// </summary>
         /// <inheritdoc />
-        public IReadOnlyCollection<IFusionProcess> Processes => processes?.Values?.ToList();
+        public IEnumerable<IFusionProcess> Processes => processes?.Values;
 
         /// <summary>
         /// Initializes a new <see cref="ScheduleService"/>.
@@ -44,6 +50,7 @@ namespace Zapp.Schedule
         /// <param name="configStore">Store used for loading configuration.</param>
         /// <param name="fusionService">Service used for resolving fusion extractions.</param>
         /// <param name="fusionProcessFactory">Factory used for creating <see cref="IFusionProcess"/> instances.</param>
+        /// <param name="announcementFactory">Factory that creates <see cref="IDeployAnnouncement"/> instances.</param>
         /// <param name="drainers">Collection of drainers that needs to determine if a <see cref="IFusionProcess"/> is ready for teardown.</param>
         /// <param name="interceptors">Collection of interceptors thats needs to be fired on certain events.</param>
         public ScheduleService(
@@ -51,6 +58,7 @@ namespace Zapp.Schedule
             IConfigStore configStore,
             IFusionService fusionService,
             IFusionProcessFactory fusionProcessFactory,
+            IDeployAnnouncementFactory announcementFactory,
             IEnumerable<IFusionProcessDrainer> drainers,
             IEnumerable<IFusionProcessInterceptor> interceptors)
         {
@@ -59,11 +67,12 @@ namespace Zapp.Schedule
             this.fusionService = fusionService;
 
             this.fusionProcessFactory = fusionProcessFactory;
+            this.announcementFactory = announcementFactory;
 
-            this.drainers = drainers.ToList();
-            this.interceptors = interceptors.ToList();
+            this.drainers = drainers.StaleReadOnly();
+            this.interceptors = interceptors.StaleReadOnly();
 
-            syncLock = new object();
+            syncLock = new SemaphoreSlim(nrOfSimultaneousOperations);
 
             processes = new SortedDictionary<string, IFusionProcess>(
                 StringComparer.OrdinalIgnoreCase);
@@ -72,46 +81,59 @@ namespace Zapp.Schedule
         /// <summary>
         /// Schedules all the configured fusions.
         /// </summary>
+        /// <param name="token">The token of cancellation.</param>
         /// <inheritdoc />
-        public void ScheduleAll()
+        public async Task ScheduleAllAsync(CancellationToken token)
         {
             var fusionIds = configStore.Value?.Fuse?.Fusions?
-                .OrderBy(f => f.Order)
-                .Select(f => f.Id)?
-                .ToList() ?? new List<string>();
+                .Select(_ => _.Id) ?? new string[0];
 
-            ScheduleMultiple(fusionIds);
+            var announcement = announcementFactory
+                .CreateNew(fusionIds);
+
+            await ScheduleAsync(announcement, token);
         }
 
         /// <summary>
-        /// Schedules a collection of fusions
+        /// Schedules an <see cref="IDeployAnnouncement"/>.
         /// </summary>
-        /// <param name="fusionIds">Identities of the fusions.</param>
-        /// <exception cref="ArgumentNullException">Throw when <paramref name="fusionIds"/> is not set.</exception>
+        /// <param name="announcement">The announcement that needs to be scheduled.</param>
+        /// <param name="token">The token of cancellation.</param>
         /// <inheritdoc />
-        public void ScheduleMultiple(IEnumerable<string> fusionIds)
+        public async Task ScheduleAsync(IDeployAnnouncement announcement, CancellationToken token)
         {
-            Guard.ParamNotNull(fusionIds, nameof(fusionIds));
+            EnsureArg.IsNotNull(announcement, nameof(announcement));
 
-            var exhausedFusionIds = fusionIds.Exhaust();
+            var fusionIds = announcement
+                .GetFusionIds()
+                .OrderBy(_ => GetOrderId(_))
+                .Stale();
 
-            lock (syncLock)
+            await syncLock.WaitAsync();
+
+            try
             {
-                var activeProcesses = GetActiveProcesses(exhausedFusionIds).Exhaust();
+                var activeProcesses = GetActiveProcesses(fusionIds);
 
-                TerminateMultiple(activeProcesses); // drains and stops the services
+                await TerminateMultipleAsync(activeProcesses, token); // drains and stops the services
 
-                fusionService.ExtractMultiple(exhausedFusionIds); // extracts the new fusions
+                if (announcement.IsDelta())
+                {
+                    fusionService.Extract(announcement, token); // extracts the new fusions
+                }
 
-                var newProcesses = SpawnMultiple(exhausedFusionIds).Exhaust(); // spawns the services
+                var newProcesses = SpawnMultiple(fusionIds, token).Stale(); // spawns the services
 
-                WaitForAnnouncements(newProcesses).GetAwaiter().GetResult(); // wait for all port callbacks
+                await WaitForAnnouncements(newProcesses, token); // wait for all port callbacks
+                await StartupMultipleAsync(newProcesses, token); // calls all the startups
+                await HealthCheckMultipleAsync(newProcesses, token); // asks for all the nurse statusses
+                // todo: check health after startup or afterwards, what's faster ?
 
-                StartupMultiple(newProcesses); // calls all the startups
-
-                HealthCheckMultiple(newProcesses); // asks for all the nurse statusses
-
-                ResumeAll(); // execute resume of drainers
+                ResumeAll(token);
+            }
+            finally
+            {
+                syncLock.Release();
             }
         }
 
@@ -120,17 +142,16 @@ namespace Zapp.Schedule
         /// </summary>
         /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="port">Port of the fusions' rest service.</param>
-        /// <exception cref="ArgumentException">Throw when <paramref name="fusionId"/> is not set.</exception>
         /// <inheritdoc />
         public void Announce(string fusionId, int port)
         {
-            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
+            EnsureArg.IsNotNullOrEmpty(fusionId, nameof(fusionId));
 
             var process = default(IFusionProcess);
 
             if (!TryGetActiveProcess(fusionId, out process))
             {
-                throw new Exception();
+                throw new ScheduleException(ScheduleException.NotFound, fusionId);
             }
 
             process.Announce(port);
@@ -146,9 +167,8 @@ namespace Zapp.Schedule
         private IEnumerable<IFusionProcess> GetActiveProcesses(IEnumerable<string> fusionIds)
         {
             var current = default(IFusionProcess);
-            var exhausedFusionIds = fusionIds.Exhaust();
 
-            foreach (string fusionId in exhausedFusionIds)
+            foreach (string fusionId in fusionIds)
             {
                 if (TryGetActiveProcess(fusionId, out current))
                 {
@@ -157,30 +177,36 @@ namespace Zapp.Schedule
             }
         }
 
-        private void StartupMultiple(params IFusionProcess[] processes)
+        private async Task StartupMultipleAsync(IEnumerable<IFusionProcess> processes, CancellationToken token)
         {
             foreach (var process in processes)
             {
-                Startup(process);
+                token.ThrowIfCancellationRequested();
+
+                await StartupAsync(process, token);
             }
         }
 
-        private void Startup(IFusionProcess process)
+        private async Task StartupAsync(IFusionProcess process, CancellationToken token)
         {
-            process.Startup();
+            await process.StartupAsync(token);
 
             foreach (var interceptor in interceptors)
             {
+                token.ThrowIfCancellationRequested();
+
                 interceptor.OnStartupCalled(process);
             }
 
             process.OnInterceptorsInformed();
         }
 
-        private IEnumerable<IFusionProcess> SpawnMultiple(params string[] fusionIds)
+        private IEnumerable<IFusionProcess> SpawnMultiple(IEnumerable<string> fusionIds, CancellationToken token)
         {
             foreach (var fusionId in fusionIds)
             {
+                token.ThrowIfCancellationRequested();
+
                 yield return Spawn(fusionId);
             }
         }
@@ -196,61 +222,106 @@ namespace Zapp.Schedule
             return process;
         }
 
-        private async Task WaitForAnnouncements(params IFusionProcess[] processes)
+        private async Task WaitForAnnouncements(IEnumerable<IFusionProcess> processes, CancellationToken token)
         {
+            var startedUtc = DateTime.UtcNow;
+            var pendingProcesses = default(IEnumerable<IFusionProcess>);
+
+            processes = processes.Stale();
+
             do
             {
-                var hasDeadProcesses = processes
-                    .Any(_ => _.State == FusionProcessState.Dead);
+                token.ThrowIfCancellationRequested();
 
-                if (hasDeadProcesses)
+                pendingProcesses = processes
+                    .Where(_ => _.State != FusionProcessState.Announced)
+                    .Stale();
+
+                var deadProcesses = processes
+                    .Where(_ => _.State == FusionProcessState.Dead)
+                    .Stale();
+
+                var hasTimeout = (DateTime.UtcNow - startedUtc) >= waitForAnnouncementTimeout;
+
+                if (deadProcesses.Any())
                 {
-                    throw new  Exception();
+                    var errors = deadProcesses
+                        .Select(_ => new ScheduleException(ScheduleException.Dead, _.FusionId));
+
+                    throw new AggregateException(errors);
+                }
+
+                if (hasTimeout &&
+                    pendingProcesses.Any())
+                {
+                    var errors = pendingProcesses
+                        .Select(_ => new ScheduleException(ScheduleException.TimedOut, _.FusionId));
+
+                    throw new AggregateException(errors);
                 }
 
                 await Task.Delay(waitForAnnouncementInterval);
             }
-            while (!processes.All(_ => _.State == FusionProcessState.Announced));
+            while (pendingProcesses.Any());
         }
 
-        private void HealthCheckMultiple(params IFusionProcess[] processes)
+        private async Task HealthCheckMultipleAsync(IEnumerable<IFusionProcess> processes, CancellationToken token)
         {
-            foreach(var process in processes)
+            foreach (var process in processes)
             {
-                HealthCheck(process);
+                token.ThrowIfCancellationRequested();
+
+                await HealthCheckAsync(process, token);
             }
         }
 
-        private void HealthCheck(IFusionProcess process)
+        private async Task HealthCheckAsync(IFusionProcess process, CancellationToken token)
         {
-            // todo: create!
+            await Task.Delay(0); // todo: create!
         }
 
-        private void TerminateAll()
+        private async Task TerminateAllAsync(CancellationToken token)
         {
-            lock (syncLock)
-            {
-                var activeProcesses = processes?.Values?.ToArray() ?? new IFusionProcess[0];
+            await syncLock.WaitAsync();
 
-                TerminateMultiple(activeProcesses);
+            try
+            {
+                await TerminateMultipleAsync(processes.Values, token);
+            }
+            finally
+            {
+                syncLock.Release();
             }
         }
 
-        private void TerminateMultiple(params IFusionProcess[] processes)
+        private async Task TerminateMultipleAsync(IEnumerable<IFusionProcess> processes, CancellationToken token)
         {
-            Drain(processes);
+            processes = processes.Stale();
+
+            try
+            {
+                await DrainAsync(processes, token);
+            }
+            catch (OperationCanceledException)
+            {
+                ResumeAll(token);
+
+                throw;
+            }
 
             foreach (var process in processes)
             {
-                Terminate(process);
+                token.ThrowIfCancellationRequested();
+
+                await TerminateAsync(process, token);
             }
         }
 
-        private void Terminate(IFusionProcess process)
+        private async Task TerminateAsync(IFusionProcess process, CancellationToken token)
         {
             try
             {
-                process.Terminate();
+                await process.TerminateAsync(token);
 
                 (process as IDisposable).Dispose();
             }
@@ -260,8 +331,10 @@ namespace Zapp.Schedule
             }
         }
 
-        private void Drain(params IFusionProcess[] processes)
+        private async Task DrainAsync(IEnumerable<IFusionProcess> processes, CancellationToken token)
         {
+            processes = processes.Stale();
+
             if (!processes.Any())
             {
                 return;
@@ -269,16 +342,26 @@ namespace Zapp.Schedule
 
             foreach (var drainer in drainers)
             {
-                drainer.Drain(processes);
+                token.ThrowIfCancellationRequested();
+
+                await drainer.DrainAsync(processes, token);
             }
         }
 
-        private void ResumeAll()
+        private void ResumeAll(CancellationToken token)
         {
             foreach (var drainer in drainers)
             {
+                token.ThrowIfCancellationRequested();
+
                 drainer.Resume();
             }
+        }
+
+        private int GetOrderId(string fusionId)
+        {
+            return configStore.Value?.Fuse?.Fusions
+                .SingleOrDefault(_ => string.Equals(_.Id, fusionId, StringComparison.OrdinalIgnoreCase))?.Order ?? int.MaxValue;
         }
 
         /// <summary>
@@ -288,12 +371,17 @@ namespace Zapp.Schedule
         {
             try
             {
-                TerminateAll();
+                TerminateAllAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
             }
             catch (Exception ex)
             {
                 logService?.Fatal("Failed to drain all processes", ex);
             }
+
+            syncLock?.Dispose();
+            syncLock = null;
 
             processes?.Clear();
             processes = null;

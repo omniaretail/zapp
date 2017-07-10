@@ -1,8 +1,13 @@
-﻿using log4net;
+﻿using EnsureThat;
+using log4net;
 using StackExchange.Redis;
 using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Zapp.Config;
-using Zapp.Core.Clauses;
+using Zapp.Deploy;
+using Zapp.Extensions;
 using Zapp.Pack;
 
 namespace Zapp.Sync
@@ -10,24 +15,28 @@ namespace Zapp.Sync
     /// <summary>
     /// Represents a class which is responsible for synchronizing specific parts of zapp.
     /// </summary>
-    public class RedisSyncService : ISyncService, IDisposable
+    public sealed class RedisSyncService : ISyncService, IDisposable
     {
         private readonly ILog logService;
         private readonly IConfigStore configStore;
+        private readonly IConnectionMultiplexerFactory multiplexerFactory;
 
-        private ConnectionMultiplexer multiplexer;
+        private IConnectionMultiplexer multiplexer;
 
         /// <summary>
         /// Initializes a new <see cref="RedisSyncService"/>.
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Configuration storage instance.</param>
+        /// <param name="multiplexerFactory">Facory that is able to create instances of <see cref="IConnectionMultiplexer"/>.</param>
         public RedisSyncService(
             ILog logService,
-            IConfigStore configStore)
+            IConfigStore configStore,
+            IConnectionMultiplexerFactory multiplexerFactory)
         {
             this.logService = logService;
             this.configStore = configStore;
+            this.multiplexerFactory = multiplexerFactory;
         }
 
         /// <summary>
@@ -35,40 +44,76 @@ namespace Zapp.Sync
         /// </summary>
         public void Connect()
         {
-            // todo: make this test-able.
-            SyncConfig config = configStore.Value.Sync;
+            var config = configStore.Value.Sync;
 
-            multiplexer = ConnectionMultiplexer.Connect(config.ConnectionString);
+            multiplexer = multiplexerFactory.CreateNew(config.ConnectionString);
 
             logService.Info($"Connected to redis on: {config.ConnectionString}");
         }
 
         /// <summary>
-        /// Synchronizes the version of the requested package from the server.
+        /// Gets if the database is empty.
         /// </summary>
-        /// <param name="packageId">Identity of the package.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="packageId"/> is not set.</exception>
-        public string Sync(string packageId)
+        /// <inheritDoc />
+        public async Task<bool> IsEmptyAsync()
         {
-            Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
-
-            return multiplexer
+            var randomKey = await multiplexer
                 .GetDatabase()
-                .StringGet($"package:{packageId}");
+                .KeyRandomAsync();
+
+            return randomKey == default(RedisKey);
         }
 
         /// <summary>
-        /// Synchronizes the version of the requested package to the server.
+        /// Get the latest version stored in the server of the requested package.
         /// </summary>
-        /// <param name="version">Version of the package.</param>
-        /// <exception cref="ArgumentNullException">Throw when <paramref name="version"/> is not set.</exception>
-        public bool Announce(PackageVersion version)
+        /// <param name="packageId">Identity of the package.</param>
+        /// <inheritDoc />
+        public async Task<string> GetVersionAsync(string packageId)
         {
-            Guard.ParamNotNull(version, nameof(version));
+            EnsureArg.IsNotNullOrEmpty(packageId, nameof(packageId));
 
-            return multiplexer
+            return await multiplexer
                 .GetDatabase()
-                .StringSet($"package:{version.PackageId}", version.DeployVersion);
+                .StringGetAsync($"package:{packageId}");
+        }
+
+        /// <summary>
+        /// Announces the versions to the server.
+        /// </summary>
+        /// <param name="announcement">Announcement that needs to be synchronized.</param>
+        /// <param name="token">Token used to cancel the announcement.</param>
+        /// <inheritDoc />
+        public async Task AnnounceAsync(IDeployAnnouncement announcement, CancellationToken token)
+        {
+            EnsureArg.IsNotNull(announcement, nameof(announcement));
+
+            var newPackageVersions = announcement
+                .GetNewPackageVersions()
+                .Stale();
+
+            if (!newPackageVersions.Any())
+            {
+                return;
+            }
+
+            foreach (var version in newPackageVersions)
+            {
+                token.ThrowIfCancellationRequested();
+
+                await AnnounceAsync(version);
+            }
+        }
+
+        private async Task AnnounceAsync(PackageVersion version)
+        {
+            EnsureArg.IsNotNull(version, nameof(version));
+
+            var isStored = await multiplexer
+                .GetDatabase()
+                .StringSetAsync($"package:{version.PackageId}", version.DeployVersion);
+
+            if (!isStored) throw new Exception(); // todo: add more meaningful error
         }
 
         /// <summary>

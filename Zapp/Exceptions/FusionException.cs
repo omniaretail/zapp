@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace Zapp.Exceptions
 {
     /// <summary>
     /// Represents one non existent fusion configuration that was requested during extraction.
     /// </summary>
-    public class FusionException : Exception
+    [Serializable]
+    public class FusionException : Exception, ISerializable
     {
         /// <summary>
         /// Represents a message for a non found fusion.
@@ -49,6 +51,24 @@ namespace Zapp.Exceptions
             : base(message, innerException)
         {
             FusionId = fusionId ?? "?";
+        }
+
+        /// <summary>
+        /// Initializes a new <see cref="FusionException"/> for the <see cref="ISerializable"/> interface.
+        /// </summary>
+        /// <inheritDoc />
+        public FusionException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+            FusionId = info.GetString(nameof(FusionId));
+        }
+
+        /// <inheritdoc />
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            base.GetObjectData(info, context);
+
+            info.AddValue(nameof(FusionId), FusionId);
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using Zapp.Pack;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Zapp.Deploy;
 
 namespace Zapp.Sync
 {
@@ -13,15 +15,21 @@ namespace Zapp.Sync
         void Connect();
 
         /// <summary>
-        /// Synchronizes the version of the requested package.
+        /// Gets if the database is empty.
         /// </summary>
-        /// <param name="packageId">Identity of the package.</param>
-        string Sync(string packageId);
+        Task<bool> IsEmptyAsync();
 
         /// <summary>
-        /// Announces the version of the requested package to the server.
+        /// Get the latest version stored in the server of the requested package.
         /// </summary>
-        /// <param name="version">Version of the package.</param>
-        bool Announce(PackageVersion version);
+        /// <param name="packageId">Identity of the package.</param>
+        Task<string> GetVersionAsync(string packageId);
+
+        /// <summary>
+        /// Announces the versions to the server.
+        /// </summary>
+        /// <param name="announcement">Announcement that needs to be synchronized.</param>
+        /// <param name="token">Token used to cancel the announcement.</param>
+        Task AnnounceAsync(IDeployAnnouncement announcement, CancellationToken token);
     }
 }

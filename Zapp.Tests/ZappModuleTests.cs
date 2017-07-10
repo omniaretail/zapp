@@ -32,7 +32,7 @@ namespace Zapp
             {
                 var bindings = kernel.GetBindings(@case);
 
-                Assert.That(bindings, Is.Not.Empty, $"Intefrace {@case.Name} does not have a proper binding for module {nameof(ZappModule)}.");
+                Assert.That(bindings, Is.Not.Empty, $"Interface {@case.Name} does not have a proper binding for module {nameof(ZappModule)}.");
             }
         }
     }

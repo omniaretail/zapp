@@ -4,6 +4,7 @@ using Ninject.Extensions.Factory;
 using Ninject.Extensions.Perspectives;
 using Ninject.Modules;
 using System.IO;
+using Zapp.Catalogue;
 using Zapp.Config;
 using Zapp.Core;
 using Zapp.Deploy;
@@ -28,9 +29,12 @@ namespace Zapp
         /// </summary>
         public override void Load()
         {
-            Kernel.Load(new[] { new ZappCoreModule() });
+            Kernel.Load(new[]
+            {
+                new ZappCoreModule()
+            });
 
-            Bind<ILog>().ToMethod(ctx => LogManager.GetLogger(ctx.Request.Target.Member.DeclaringType));
+            Bind<ILog>().ToMethod(_ => LogManager.GetLogger(_.Request.Target.Member.DeclaringType));
 
             Bind<IConfigStore>().To<JsonConfigStore>().InSingletonScope();
 
@@ -48,6 +52,8 @@ namespace Zapp
             Bind<IAntDirectory>().To<AntDirectory>();
             Bind<IAntDirectoryFactory>().ToFactory();
 
+            Bind<IPackageVersionValidator>().To<PackageVersionValidator>().InSingletonScope();
+
             Bind<IPackageFactory>().ToFactory();
             Bind<IPackage>().To<ZipPackage>();
 
@@ -57,10 +63,16 @@ namespace Zapp
             Bind<IFusion>().To<ZipFusion>();
             Bind<IFusionFactory>().ToFactory();
 
-            Bind<IFusionExtracter>().To<FileFusionExtractor>().InSingletonScope();
+            Bind<IFusionBuilder>().To<FusionBuilder>().InSingletonScope();
+
+            Bind<IFusionExtracter>().To<FusionExtractor>().InSingletonScope();
 
             Bind<IFusionProcess>().To<FusionProcess>();
             Bind<IFusionProcessFactory>().ToFactory();
+
+            Bind<IFusionCatalogue>().To<FusionCatalogue>().InSingletonScope();
+
+            Bind<IFusionMaid>().To<FusionMaid>().InSingletonScope();
 
             Bind<ITransformConfig>().To<XmlTransformConfig>().InSingletonScope();
 
@@ -71,6 +83,11 @@ namespace Zapp
             Bind<IFrameworkPackageEntryFactory>().ToFactory();
 
             Bind<IFile>().ToPerspective(typeof(File));
+
+            Bind<IConnectionMultiplexerFactory>().To<ConnectionMultiplexerFactory>().InSingletonScope();
+
+            Bind<IDeployAnnouncement>().To<DeployAnnouncement>().InTransientScope();
+            Bind<IDeployAnnouncementFactory>().ToFactory();
         }
     }
 }

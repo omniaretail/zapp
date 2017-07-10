@@ -1,13 +1,14 @@
-﻿using AntPathMatching;
-using log4net;
-using Moq;
+﻿using Moq;
+using Moq.Sequences;
 using Newtonsoft.Json;
-using Ninject.Extensions.Factory;
 using NUnit.Framework;
-using System;
+using Ploeh.AutoFixture;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Zapp.Config;
+using Zapp.Deploy;
+using Zapp.Extensions;
 using Zapp.Pack;
 using Zapp.Sync;
 
@@ -20,11 +21,6 @@ namespace Zapp.Fuse
         public override void Setup()
         {
             base.Setup();
-
-            kernel.Bind<IAntFactory>().ToFactory();
-            kernel.Bind<IAntDirectoryFactory>().ToFactory();
-
-            kernel.Bind<IFusionFactory>().ToFactory();
 
             config.Fuse.Fusions.Add(new FusePackConfig
             {
@@ -42,14 +38,14 @@ namespace Zapp.Fuse
         [Test]
         public void GetPackageVersions_WhenCalled_ReturnsExpectedValue()
         {
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Sync("test"))
-                .Returns("0.0.1");
+            var syncMock = fixture.Freeze<Mock<ISyncService>>();
 
-            var sut = GetSystemUnderTest();
-            var actual = sut.GetPackageVersions("testVersions");
+            syncMock.Setup(_ => _.GetVersionAsync("test")).ReturnsAsync("0.0.1");
 
-            var expected = new List<PackageVersion>()
+            var sut = fixture.Create<FusionService>();
+            var actual = sut.GetPackageVersions("testVersions").Stale();
+
+            var expected = new[]
             {
                 new PackageVersion("test", "0.0.1"),
                 new PackageVersion("test2"),
@@ -62,80 +58,26 @@ namespace Zapp.Fuse
         }
 
         [Test]
-        public void ExtractMultiple_WhenCalledWithKnownLibraries_ReturnsTrue()
+        public void ExtractMultiple_WhenCalled_DoesWhatExpected()
         {
-            var version = new PackageVersion("library1", "1.0.0");
+            var announcementMock = fixture.Freeze<Mock<IDeployAnnouncement>>();
+            var fusionMock = fixture.Freeze<Mock<IFusion>>();
+            var builderMock = fixture.Freeze<Mock<IFusionBuilder>>();
+            var versionValidatorMock = fixture.Freeze<Mock<IPackageVersionValidator>>();
+            var extractorMock = fixture.Freeze<Mock<IFusionExtracter>>();
 
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Sync(version.PackageId))
-                .Returns(version.DeployVersion);
+            using (Sequence.Create())
+            {
+                announcementMock.Setup(_ => _.GetFusionIds()).InSequence(Times.Once()).Returns(() => new[] { "test" });
+                announcementMock.Setup(_ => _.GetPackageVersions(It.IsAny<string>())).InSequence(Times.Once());
+                versionValidatorMock.Setup(_ => _.ConfirmAvailability(It.IsAny<IEnumerable<PackageVersion>>())).InSequence(Times.Once());
+                builderMock.Setup(_ => _.Build(It.IsAny<FusePackConfig>(), It.IsAny<IFusion>(), It.IsAny<IEnumerable<PackageVersion>>())).InSequence(Times.Once());
+                extractorMock.Setup(_ => _.Extract(It.IsAny<FusePackConfig>(), It.IsAny<Stream>())).InSequence(Times.Once());
 
-            var packageMock = kernel.GetMock<IPackage>();
-            var packageEntryMock = kernel.GetMock<IPackageEntry>();
+                var sut = fixture.Create<FusionService>();
 
-            kernel.GetMock<IAnt>()
-                .Setup(m => m.IsMatch(It.IsAny<string>()))
-                .Returns(true);
-
-            packageMock
-                .Setup(m => m.GetEntries())
-                .Returns(() => new[] { packageEntryMock.Object });
-
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.LoadPackage(version))
-                .Returns(() => packageMock.Object);
-
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.IsPackageVersionDeployed(version))
-                .Returns(true);
-
-            var sut = GetSystemUnderTest();
-
-            Assert.That(() => sut.ExtractMultiple(new[] { "test" }), Throws.Nothing);
-
-            kernel.GetMock<ILog>()
-                .Verify(m => m.Debug(It.IsAny<string>()), Times.AtLeast(3));
-
-            kernel.GetMock<IFusionExtracter>()
-                .Verify(m => m.Extract(It.IsAny<FusePackConfig>(), It.IsAny<Stream>()), Times.Exactly(1));
-
-            kernel.GetMock<IFusion>()
-                .Verify(m => m.AddEntry(It.IsAny<IPackageEntry>()), Times.AtLeast(1));
-        }
-
-        [Test]
-        public void ExtractMultiple_WhenCalledWithUnknownLibraries_Throws()
-        {
-            var version = new PackageVersion("library1", "1.0.0");
-
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Sync(version.PackageId))
-                .Returns(() => null);
-
-            var sut = GetSystemUnderTest();
-
-            Assert.That(() => sut.ExtractMultiple(new[] { "test" }), Throws.InstanceOf<AggregateException>());
-        }
-
-        [Test]
-        public void ExtractMultiple_WhenCalledWithNonDeployedLibraries_Throws()
-        {
-            var version = new PackageVersion("library1", "1.0.0");
-
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Sync(version.PackageId))
-                .Returns(version.DeployVersion);
-
-            var packageMock = kernel.GetMock<IPackage>();
-            var packageEntryMock = kernel.GetMock<IPackageEntry>();
-
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.IsPackageVersionDeployed(version))
-                .Returns(false);
-
-            var sut = GetSystemUnderTest();
-
-            Assert.That(() => sut.ExtractMultiple(new[] { "test" }), Throws.InstanceOf<AggregateException>());
+                Assert.That(() => sut.Extract(announcementMock.Object, CancellationToken.None), Throws.Nothing);
+            }
         }
     }
 }

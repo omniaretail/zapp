@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using Zapp.Deploy;
@@ -29,23 +31,29 @@ namespace Zapp.Rest.Controllers
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
         /// <param name="deployVersion">Deploy version of the package.</param>
+        /// <param name="token">Token that is used to keep track of cancelled requests.</param>
         [HttpGet, Route("api/clerk/announce/{packageId}/{deployVersion}")]
-        public StatusCodeResult Announce(string packageId, string deployVersion)
+        public async Task<StatusCodeResult> Announce(
+            string packageId,
+            string deployVersion,
+            CancellationToken token)
         {
-            return Announce(new[]
-            {
-                new PackageVersion(packageId, deployVersion)
-            });
+            var versions = new[] { new PackageVersion(packageId, deployVersion) };
+
+            return await Announce(versions, token);
         }
 
         /// <summary>
         /// Announces a new collection of package versions.
         /// </summary>
         /// <param name="versions">Collection of package versions.</param>
+        /// <param name="token">Token that is used to keep track of cancelled requests.</param>        
         [HttpPost, Route("api/clerk/announce/")]
-        public StatusCodeResult Announce([FromBody]IReadOnlyCollection<PackageVersion> versions)
+        public async Task<StatusCodeResult> Announce(
+            [FromBody]IReadOnlyCollection<PackageVersion> versions,
+            CancellationToken token)
         {
-            deployService.Announce(versions);
+            await deployService.AnnounceAsync(versions, token);
 
             return StatusCode(HttpStatusCode.OK);
         }

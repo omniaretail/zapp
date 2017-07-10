@@ -1,11 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using EnsureThat;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Zapp.Core;
-using Zapp.Core.Clauses;
-using Zapp.Pack;
 
 namespace Zapp.Fuse
 {
@@ -49,7 +48,7 @@ namespace Zapp.Fuse
         /// <exception cref="ArgumentException">Throw when <paramref name="key"/> is not set.</exception>
         public void SetInfo(string key, string value)
         {
-            Guard.ParamNotNullOrEmpty(key, nameof(key));
+            EnsureArg.IsNotNullOrEmpty(key, nameof(key));
 
             info[key] = value;
         }

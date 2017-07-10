@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using EnsureThat;
+using Newtonsoft.Json;
 using System;
 using Zapp.Pack;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Config
 {
@@ -35,7 +35,7 @@ namespace Zapp.Config
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="version"/> is not set.</exception>
         public string GetActualPackagePattern(PackageVersion version)
         {
-            Guard.ParamNotNull(version, nameof(version));
+            EnsureArg.IsNotNull(version, nameof(version));
 
             return PackagePattern
                 .Replace("{packageId}", version.PackageId)

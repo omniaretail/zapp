@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Zapp.Schedule
 {
@@ -52,12 +54,13 @@ namespace Zapp.Schedule
         /// <summary>
         /// Runs the startup event on the process.
         /// </summary>
-        void Startup();
+        /// <param name="token">Token used to cancel the http request.</param>
+        Task StartupAsync(CancellationToken token);
 
         /// <summary>
         /// Runs the terminate event on the process.
         /// </summary>
-        void Terminate();
+        Task TerminateAsync(CancellationToken token);
 
         /// <summary>
         /// Called when the interceptors are informed.

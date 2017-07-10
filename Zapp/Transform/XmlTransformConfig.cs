@@ -1,7 +1,7 @@
-﻿using System.IO;
+﻿using EnsureThat;
+using System.IO;
 using System.Xml.Linq;
 using Zapp.Config;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Transform
 {
@@ -16,8 +16,7 @@ namespace Zapp.Transform
         /// Initializes a new <see cref="XmlTransformConfig"/>.
         /// </summary>
         /// <param name="configStore">Store used for getting configuration.</param>
-        public XmlTransformConfig(
-            IConfigStore configStore)
+        public XmlTransformConfig(IConfigStore configStore)
         {
             this.configStore = configStore;
         }
@@ -30,8 +29,8 @@ namespace Zapp.Transform
         /// <inheritdoc />
         public void Transform(Stream input, Stream output)
         {
-            Guard.ParamNotNull(input, nameof(input));
-            Guard.ParamNotNull(output, nameof(output));
+            EnsureArg.IsNotNull(input, nameof(input));
+            EnsureArg.IsNotNull(output, nameof(output));
 
             var config = configStore.Value?.Fuse ?? new FuseConfig();
             var document = XDocument.Load(input);

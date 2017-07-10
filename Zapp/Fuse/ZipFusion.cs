@@ -1,15 +1,15 @@
-﻿using System;
+﻿using EnsureThat;
+using System;
 using System.IO;
 using System.IO.Compression;
 using Zapp.Pack;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Fuse
 {
     /// <summary>
     /// Represents an inmplementation of <see cref="IFusion"/> as a zip-file.
     /// </summary>
-    public class ZipFusion : IFusion, IDisposable
+    public sealed class ZipFusion : IFusion, IDisposable
     {
         private ZipArchive archive;
 
@@ -20,7 +20,7 @@ namespace Zapp.Fuse
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="contentStream"/> is not set.</exception>
         public ZipFusion(Stream contentStream)
         {
-            Guard.ParamNotNull(contentStream, nameof(contentStream));
+            EnsureArg.IsNotNull(contentStream, nameof(contentStream));
 
             archive = new ZipArchive(contentStream, ZipArchiveMode.Create);
         }
@@ -33,7 +33,7 @@ namespace Zapp.Fuse
         /// <inheritdoc />
         public void AddEntry(IPackageEntry entry)
         {
-            Guard.ParamNotNull(entry, nameof(entry));
+            EnsureArg.IsNotNull(entry, nameof(entry));
 
             var newEntry = archive.CreateEntry(entry.Name);
 

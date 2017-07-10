@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Zapp.Deploy;
 
 namespace Zapp.Schedule
 {
@@ -10,18 +13,20 @@ namespace Zapp.Schedule
         /// <summary>
         /// Represents the current running processes.
         /// </summary>
-        IReadOnlyCollection<IFusionProcess> Processes { get; }
+        IEnumerable<IFusionProcess> Processes { get; }
 
         /// <summary>
         /// Schedules all the configured fusions.
         /// </summary>
-        void ScheduleAll();
+        /// <param name="token">The token of cancellation.</param>
+        Task ScheduleAllAsync(CancellationToken token);
 
         /// <summary>
-        /// Schedules a collection of fusions
+        /// Schedules an <see cref="IDeployAnnouncement"/>.
         /// </summary>
-        /// <param name="fusionIds">Identities of the fusions.</param>
-        void ScheduleMultiple(IEnumerable<string> fusionIds);
+        /// <param name="announcement">The announcement that needs to be scheduled.</param>
+        /// <param name="token">The token of cancellation.</param>
+        Task ScheduleAsync(IDeployAnnouncement announcement, CancellationToken token);
 
         /// <summary>
         /// Announces a running app on which rest port it's bound.
