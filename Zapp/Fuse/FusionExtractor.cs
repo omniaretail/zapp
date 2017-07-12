@@ -62,7 +62,7 @@ namespace Zapp.Fuse
             {
                 archive.ExtractToDirectory(fusionLocation);
 
-                logService.Info($"Fusion {config.Id} extracted.");
+                logService.Info($"Fusion: '{config.Id}' has been extracted to disk.");
             }
         }
     }

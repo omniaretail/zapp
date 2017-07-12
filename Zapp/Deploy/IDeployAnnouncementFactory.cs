@@ -11,13 +11,11 @@ namespace Zapp.Deploy
         /// <summary>
         /// Creates a new <see cref="IDeployAnnouncement"/> with the requested <paramref name="packageVersions"/>.
         /// </summary>
-        /// <param name="packageVersions">Versions of the announcement.</param>
-        IDeployAnnouncement CreateNew(IEnumerable<PackageVersion> packageVersions);
-
-        /// <summary>
-        /// Creates a new <see cref="IDeployAnnouncement"/> with the requested <paramref name="fusionIds"/>.
-        /// </summary>
-        /// <param name="fusionIds">Ids of the fusions for the announcement.</param>
-        IDeployAnnouncement CreateNew(IEnumerable<string> fusionIds);
+        /// <param name="fusionIds">Ids of the fusions that needs to be deployed. (empty if <paramref name="packageVersions"/> is specified).</param>
+        /// <param name="packageVersions">Versions of the packages that needs to be deployed. (empty if <paramref name="fusionIds"/> is specified).</param>
+        IDeployAnnouncement CreateNew(
+            IEnumerable<string> fusionIds, 
+            IEnumerable<PackageVersion> packageVersions
+        );
     }
 }

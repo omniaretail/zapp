@@ -1,5 +1,6 @@
 ﻿using AntPathMatching;
 using EnsureThat;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,6 +21,7 @@ namespace Zapp.Fuse
     {
         private readonly IAnt entryFilter;
 
+        private readonly ILog logService;
         private readonly IConfigStore configStore;
         private readonly IPackService packService;
         private readonly INuGetPackageResolver nuGetPackageResolver;
@@ -33,6 +35,7 @@ namespace Zapp.Fuse
         /// <summary>
         /// Initializes a new <see cref="FusionBuilder"/> with all it's dependencies.
         /// </summary>
+        /// <param name="logService">Service used for logging.</param>
         /// <param name="antFactory">Factory used to create <see cref="IAnt"/> instances.</param>
         /// <param name="configStore">Store that resolved app-level configuration.</param>
         /// <param name="packService">Service that is used to get the packages from.</param>
@@ -41,6 +44,7 @@ namespace Zapp.Fuse
         /// <param name="fusionFilters">A collection of filters used to filter instances of <see cref="IPackageEntry"/>.</param>
         /// <param name="fusionInterceptors">A collection of interceptors that intercept the creation of <see cref="IPackageEntry"/>.</param>
         public FusionBuilder(
+            ILog logService,
             IAntFactory antFactory,
             IConfigStore configStore,
             IPackService packService,
@@ -49,6 +53,7 @@ namespace Zapp.Fuse
             IEnumerable<IFusionFilter> fusionFilters,
             IEnumerable<IFusionInterceptor> fusionInterceptors)
         {
+            this.logService = logService;
             this.configStore = configStore;
             this.packService = packService;
             this.nuGetPackageResolver = nuGetPackageResolver;
@@ -88,6 +93,8 @@ namespace Zapp.Fuse
                 foreach (var entry in finalEntries)
                 {
                     SaveEntryOnFusion(fusion, entry, fusionConfig);
+
+                    logService.Debug($"Entry: '{entry.Name}' added to fusion: '{fusionConfig.Id}'.");
                 }
             }
             finally

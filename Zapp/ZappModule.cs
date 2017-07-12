@@ -1,4 +1,5 @@
 ﻿using AntPathMatching;
+using FluentValidation;
 using log4net;
 using Ninject.Extensions.Factory;
 using Ninject.Extensions.Perspectives;
@@ -88,6 +89,25 @@ namespace Zapp
 
             Bind<IDeployAnnouncement>().To<DeployAnnouncement>().InTransientScope();
             Bind<IDeployAnnouncementFactory>().ToFactory();
+
+            LoadPerspectives();
+            LoadValidators();
+        }
+
+        private void LoadPerspectives()
+        {
+            Bind<IDirectoryInfo>().ToPerspective(typeof(DirectoryInfo));
+            Bind<IDirectoryInfoFactory>().ToFactory();
+        }
+
+        private void LoadValidators()
+        {
+            Bind<IValidator<FuseConfig>>().To<FuseConfigValidator>().InSingletonScope();
+            Bind<IValidator<FusePackConfig>>().To<FusePackConfigValidator>().InSingletonScope();
+            Bind<IValidator<PackConfig>>().To<PackConfigValidator>().InSingletonScope();
+            Bind<IValidator<RestConfig>>().To<RestConfigValidator>().InSingletonScope();
+            Bind<IValidator<SyncConfig>>().To<SyncConfigValidator>().InSingletonScope();
+            Bind<IValidator<ZappConfig>>().To<ZappConfigValidator>().InSingletonScope();
         }
     }
 }

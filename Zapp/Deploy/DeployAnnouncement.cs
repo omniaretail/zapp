@@ -22,34 +22,27 @@ namespace Zapp.Deploy
         /// Initializes a new <see cref="DeployAnnouncement"/> with the new <paramref name="packageVersions"/> that needs to be deployed.
         /// </summary>
         /// <param name="fusionService">Service used to get info for package fusions.</param>
-        /// <param name="packageVersions">Versions of the packages that needs to be deployed.</param>
+        /// <param name="fusionIds">Ids of the fusions that needs to be deployed. (empty if <paramref name="packageVersions"/> is specified).</param>
+        /// <param name="packageVersions">Versions of the packages that needs to be deployed. (empty if <paramref name="fusionIds"/> is specified).</param>
         public DeployAnnouncement(
             IFusionService fusionService,
+            IEnumerable<string> fusionIds,
             IEnumerable<PackageVersion> packageVersions)
         {
+            EnsureArg.IsNotNull(fusionIds, nameof(fusionIds));
             EnsureArg.IsNotNull(packageVersions, nameof(packageVersions));
 
             this.fusionService = fusionService;
-            this.packageVersions = packageVersions.StaleReadOnly();
 
-            affectedFusionIds = GetAffectedFusionIds(this.packageVersions).StaleReadOnly();
-        }
+            var fusionIdsStale = fusionIds.StaleReadOnly();
 
-        /// <summary>
-        /// Initializes a new <see cref="DeployAnnouncement"/> with the <paramref name="fusionIds"/> that needs to be deployed.
-        /// </summary>
-        /// <param name="fusionService">Service used to get info for package fusions.</param>
-        /// <param name="fusionIds">Ids of the fusions that needs to be deployed.</param>
-        public DeployAnnouncement(
-            IFusionService fusionService,
-            IEnumerable<string> fusionIds)
-        {
-            EnsureArg.IsNotNull(fusionIds, nameof(fusionIds));
+            this.packageVersions = fusionIdsStale.Any() 
+                ? new PackageVersion[0] 
+                : packageVersions.StaleReadOnly();
 
-            this.fusionService = fusionService;
-
-            packageVersions = new PackageVersion[0];
-            affectedFusionIds = fusionIds.StaleReadOnly();
+            affectedFusionIds = fusionIdsStale.Any() 
+                ? fusionIdsStale
+                : GetAffectedFusionIds(this.packageVersions).StaleReadOnly();
         }
 
         /// <summary>

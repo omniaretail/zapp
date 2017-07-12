@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Zapp.Config;
+using Zapp.Perspectives;
 
 namespace Zapp.Catalogue
 {
@@ -19,6 +20,7 @@ namespace Zapp.Catalogue
 
         private readonly IConfigStore configStore;
         private readonly IAntFactory antFactory;
+        private readonly IDirectoryInfoFactory directoryInfoFactory;
 
         private string rootDirectory;
 
@@ -27,12 +29,15 @@ namespace Zapp.Catalogue
         /// </summary>
         /// <param name="configStore">Store used to retrieve configuration values.</param>
         /// <param name="antFactory">Factory to create <see cref="IAnt"/> instances.</param>
+        /// <param name="directoryInfoFactory">Factory to create <see cref="IDirectoryInfo"/> instances.</param>
         public FusionCatalogue(
             IConfigStore configStore,
-            IAntFactory antFactory)
+            IAntFactory antFactory,
+            IDirectoryInfoFactory directoryInfoFactory)
         {
             this.configStore = configStore;
             this.antFactory = antFactory;
+            this.directoryInfoFactory = directoryInfoFactory;
 
             rootDirectory = FormatRootDirectory(AppDomain.CurrentDomain.BaseDirectory);
         }
@@ -76,7 +81,7 @@ namespace Zapp.Catalogue
 
             var pattern = FormatFusionDirectory(fusionId, "*");
             var ant = antFactory.CreateNew(pattern);
-            var rootInfo = new DirectoryInfo(rootDirectory);
+            var rootInfo = directoryInfoFactory.CreateNew(rootDirectory);
 
             return rootInfo
                 .GetDirectories()
@@ -92,7 +97,7 @@ namespace Zapp.Catalogue
                 epoch = epoch
             };
 
-            var baseFormat = configStore.Value?.Fuse?.FusionDirectoryPattern;
+            var baseFormat = configStore.Value.Fuse.FusionDirectoryPattern;
 
             return TokenStringFormat.Format(baseFormat, args);
         }
@@ -104,11 +109,11 @@ namespace Zapp.Catalogue
                 zappDir = zappDir
             };
 
-            var baseFormat = configStore.Value?.Fuse?.RootDirectory;
+            var baseFormat = configStore.Value.Fuse.RootDirectory;
 
             return TokenStringFormat.Format(baseFormat, args);
         }
 
-        private long GetEpoch() => (long)(DateTime.UtcNow - utcEpochStartTime).TotalSeconds;
+        private long GetEpoch() => (long)(DateTime.UtcNow - utcEpochStartTime).TotalMilliseconds;
     }
 }

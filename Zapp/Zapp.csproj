@@ -67,6 +67,9 @@
     <Reference Include="Ensure.That, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Ensure.That.5.0.0\lib\net45\Ensure.That.dll</HintPath>
     </Reference>
+    <Reference Include="FluentValidation, Version=7.0.0.0, Culture=neutral, PublicKeyToken=7de548da2fbae0f0, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentValidation.7.1.0\lib\net45\FluentValidation.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=2.0.7.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.7\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
@@ -193,19 +196,26 @@
     <Compile Include="Catalogue\FusionCatalogue.cs" />
     <Compile Include="Catalogue\IFusionCatalogue.cs" />
     <Compile Include="Config\FuseConfig.cs" />
+    <Compile Include="Config\FuseConfigValidator.cs" />
+    <Compile Include="Config\FusePackConfigValidator.cs" />
     <Compile Include="Config\IConfigStore.cs" />
     <Compile Include="Config\JsonConfigStore.cs" />
     <Compile Include="Config\PackConfig.cs" />
     <Compile Include="Config\FusePackConfig.cs" />
+    <Compile Include="Config\PackConfigValidator.cs" />
+    <Compile Include="Config\RestConfigValidator.cs" />
     <Compile Include="Config\SyncConfig.cs" />
+    <Compile Include="Config\SyncConfigValidator.cs" />
     <Compile Include="Config\ZappConfig.cs" />
     <Compile Include="Config\RestConfig.cs" />
+    <Compile Include="Config\ZappConfigValidator.cs" />
     <Compile Include="Deploy\DeployAnnouncement.cs" />
     <Compile Include="Deploy\DeployService.cs" />
     <Compile Include="Deploy\IDeployAnnouncement.cs" />
     <Compile Include="Deploy\IDeployAnnouncementFactory.cs" />
     <Compile Include="Deploy\IDeployService.cs" />
     <Compile Include="Exceptions\FusionException.cs" />
+    <Compile Include="Exceptions\SyncException.cs" />
     <Compile Include="Exceptions\ScheduleException.cs" />
     <Compile Include="Extensions\IEnumerableExtensions.cs" />
     <Compile Include="Fuse\FusionExtractor.cs" />
@@ -236,16 +246,16 @@
     <Compile Include="Exceptions\PackageException.cs" />
     <Compile Include="Pack\PackageVersion.cs" />
     <Compile Include="Pack\PackageVersionValidator.cs" />
-    <Compile Include="Pack\PackDeployResult.cs" />
     <Compile Include="Pack\FilePackService.cs" />
     <Compile Include="Pack\ZipPackage.cs" />
     <Compile Include="Pack\LazyPackageEntry.cs" />
+    <Compile Include="Perspectives\IDirectoryInfo.cs" />
+    <Compile Include="Perspectives\IDirectoryInfoFactory.cs" />
     <Compile Include="Perspectives\IFile.cs" />
     <Compile Include="Rest\Controllers\RadarController.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
     <Compile Include="Rest\Controllers\ClerkController.cs" />
-    <Compile Include="Rest\Responses\GenericResponse.cs" />
     <Compile Include="Schedule\FusionProcess.cs" />
     <Compile Include="Schedule\FusionProcessState.cs" />
     <Compile Include="Schedule\IFusionProcess.cs" />

@@ -10,6 +10,7 @@ using Zapp.Deploy;
 using Zapp.Exceptions;
 using Zapp.Extensions;
 using Zapp.Fuse;
+using Zapp.Pack;
 
 namespace Zapp.Schedule
 {
@@ -89,7 +90,7 @@ namespace Zapp.Schedule
                 .Select(_ => _.Id) ?? new string[0];
 
             var announcement = announcementFactory
-                .CreateNew(fusionIds);
+                .CreateNew(fusionIds, new PackageVersion[0]);
 
             await ScheduleAsync(announcement, token);
         }
@@ -117,19 +118,35 @@ namespace Zapp.Schedule
 
                 await TerminateMultipleAsync(activeProcesses, token); // drains and stops the services
 
+                logService.Info("Terminated all active fusion(s).");
+
                 if (announcement.IsDelta())
                 {
                     fusionService.Extract(announcement, token); // extracts the new fusions
+
+                    logService.Info("Extracted all new fusion(s).");
                 }
 
                 var newProcesses = SpawnMultiple(fusionIds, token).Stale(); // spawns the services
 
+                logService.Info("Spawned all new fusion(s).");
+
                 await WaitForAnnouncements(newProcesses, token); // wait for all port callbacks
+
+                logService.Info("Received all announcements from the new fusion(s).");
+
                 await StartupMultipleAsync(newProcesses, token); // calls all the startups
+
+                logService.Info("Started all new fusion(s).");
+
                 await HealthCheckMultipleAsync(newProcesses, token); // asks for all the nurse statusses
-                // todo: check health after startup or afterwards, what's faster ?
+
+                // todo: check health after startup or afterwards, .. what's faster ?
+                logService.Info("Received all heath statusses for the new fusion(s).");
 
                 ResumeAll(token);
+
+                logService.Info("Resumed all drainers, deployment completed.");
             }
             finally
             {
@@ -196,6 +213,8 @@ namespace Zapp.Schedule
                 token.ThrowIfCancellationRequested();
 
                 interceptor.OnStartupCalled(process);
+
+                logService.Debug($"Interceptor: '{interceptor.GetType().Name}' called for fusion: '{process.FusionId}'.");
             }
 
             process.OnInterceptorsInformed();
@@ -345,6 +364,8 @@ namespace Zapp.Schedule
                 token.ThrowIfCancellationRequested();
 
                 await drainer.DrainAsync(processes, token);
+
+                logService.Debug($"Drainer: '{drainer.GetType().Name}' executed.");
             }
         }
 
@@ -360,7 +381,7 @@ namespace Zapp.Schedule
 
         private int GetOrderId(string fusionId)
         {
-            return configStore.Value?.Fuse?.Fusions
+            return configStore.Value?.Fuse?.Fusions?
                 .SingleOrDefault(_ => string.Equals(_.Id, fusionId, StringComparison.OrdinalIgnoreCase))?.Order ?? int.MaxValue;
         }
 
@@ -377,7 +398,7 @@ namespace Zapp.Schedule
             }
             catch (Exception ex)
             {
-                logService?.Fatal("Failed to drain all processes", ex);
+                logService?.Fatal("Failed to terminate all active processes.", ex);
             }
 
             syncLock?.Dispose();

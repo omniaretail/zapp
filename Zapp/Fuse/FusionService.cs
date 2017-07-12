@@ -79,7 +79,7 @@ namespace Zapp.Fuse
                 .Stale() ?? new string[0];
 
             var announcement = announcementFactory
-                .CreateNew(fusionIds);
+                .CreateNew(fusionIds, new PackageVersion[0]);
 
             Extract(announcement, token);
         }

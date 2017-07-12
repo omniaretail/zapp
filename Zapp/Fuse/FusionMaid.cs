@@ -1,4 +1,5 @@
-﻿using System;
+﻿using log4net;
+using System;
 using System.IO;
 using Zapp.Catalogue;
 
@@ -10,15 +11,19 @@ namespace Zapp.Fuse
     /// <inheritDoc />
     public class FusionMaid : IFusionMaid
     {
+        private readonly ILog logService;
         private readonly IFusionCatalogue fusionCatalogue;
 
         /// <summary>
         /// Initializes a new <see cref="FusionMaid"/> with it's dependencies.
         /// </summary>
+        /// <param name="logService">Service used for logging.</param>
         /// <param name="fusionCatalogue">Catalogue used to trace the location of fusion(s).</param>
         public FusionMaid(
+            ILog logService,
             IFusionCatalogue fusionCatalogue)
         {
+            this.logService = logService;
             this.fusionCatalogue = fusionCatalogue;
         }
 
@@ -37,8 +42,17 @@ namespace Zapp.Fuse
                 try
                 {
                     Directory.Delete(fusion, true);
+
+                    logService.Debug($"Fusion directory: '{fusion}' has been removed.");
                 }
-                catch (Exception) { }
+                catch (Exception ex) when (
+                    ex is IOException || 
+                    ex is UnauthorizedAccessException || 
+                    ex is DirectoryNotFoundException
+                )
+                {
+                    logService.Warn($"Fusion directory: '{fusion}' failed to delete due: '{ex.Message}'.");
+                }
             }
         }
     }

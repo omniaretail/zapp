@@ -64,7 +64,7 @@ namespace Zapp.Server
             }
             catch (Exception ex)
             {
-                logService.Fatal("Failed to start the server instance", ex);
+                logService.Fatal("Failed to start the server.", ex);
 
                 throw;
             }

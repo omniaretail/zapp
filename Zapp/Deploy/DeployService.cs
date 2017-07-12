@@ -57,7 +57,7 @@ namespace Zapp.Deploy
 
             packageVersionValidator.ConfirmAvailability(versions);
 
-            var announcement = announcementFactory.CreateNew(versions);
+            var announcement = announcementFactory.CreateNew(new string[0], versions);
 
             await scheduleService.ScheduleAsync(announcement, token);
             await syncService.AnnounceAsync(announcement, token);

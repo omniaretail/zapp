@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using log4net;
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,15 +16,19 @@ namespace Zapp.Rest.Controllers
     /// </summary>
     public class ClerkController : ApiController
     {
+        private readonly ILog logService;
         private readonly IDeployService deployService;
 
         /// <summary>
         /// Initializes a new <see cref="ClerkController"/>.
         /// </summary>
+        /// <param name="logService">Service used for logging.</param>
         /// <param name="deployService">Service used for announcing deployments.</param>
         public ClerkController(
+            ILog logService,
             IDeployService deployService)
         {
+            this.logService = logService;
             this.deployService = deployService;
         }
 
@@ -53,7 +59,15 @@ namespace Zapp.Rest.Controllers
             [FromBody]IReadOnlyCollection<PackageVersion> versions,
             CancellationToken token)
         {
-            await deployService.AnnounceAsync(versions, token);
+            try
+            {
+                await deployService.AnnounceAsync(versions, token);
+            }
+            catch (Exception ex)
+            {
+                logService.Fatal("Announcement failed.", ex);
+                throw;
+            }
 
             return StatusCode(HttpStatusCode.OK);
         }

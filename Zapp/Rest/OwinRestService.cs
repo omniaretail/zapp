@@ -83,7 +83,7 @@ namespace Zapp.Rest
 
             owinInstance = WebApp.Start(opts, Startup);
 
-            logService.Info($"listening on port: {opts.Port}");
+            logService.Info($"Server API listening on port: '{opts.Port}'.");
         }
 
         private void Startup(IAppBuilder app)

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Zapp.Config;
 using Zapp.Deploy;
+using Zapp.Exceptions;
 using Zapp.Extensions;
 using Zapp.Pack;
 
@@ -48,7 +49,7 @@ namespace Zapp.Sync
 
             multiplexer = multiplexerFactory.CreateNew(config.ConnectionString);
 
-            logService.Info($"Connected to redis on: {config.ConnectionString}");
+            logService.Info($"Connected to redis on: '{config.ConnectionString}'.");
         }
 
         /// <summary>
@@ -113,7 +114,10 @@ namespace Zapp.Sync
                 .GetDatabase()
                 .StringSetAsync($"package:{version.PackageId}", version.DeployVersion);
 
-            if (!isStored) throw new Exception(); // todo: add more meaningful error
+            if (!isStored)
+            {
+                throw new SyncException(SyncException.AnnounceFailure, version);
+            }
         }
 
         /// <summary>

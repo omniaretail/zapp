@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using FluentValidation;
+using log4net;
 using Newtonsoft.Json;
 using System;
 using System.IO;
@@ -11,10 +12,14 @@ namespace Zapp.Config
     /// </summary>
     public class JsonConfigStore : IConfigStore
     {
-        private const string configFile = "zapp-config.json";
+        /// <summary>
+        /// Represents the name of the config file.
+        /// </summary>
+        public const string ConfigFileName = "zapp-config.json";
 
-        private readonly ILog logService;
         private readonly IFile file;
+        private readonly ILog logService;
+        private readonly IValidator<ZappConfig> configValidator;
 
         private string filePath;
         private Lazy<ZappConfig> lazy;
@@ -30,14 +35,17 @@ namespace Zapp.Config
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="file">Util used for file operations.</param>
+        /// <param name="configValidator">Validator used to check some config constraints.</param>
         public JsonConfigStore(
+            IFile file,
             ILog logService,
-            IFile file)
+            IValidator<ZappConfig> configValidator)
         {
-            this.logService = logService;
             this.file = file;
+            this.logService = logService;
+            this.configValidator = configValidator;
 
-            filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configFile);
+            filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
 
             lazy = new Lazy<ZappConfig>(() => Resolve());
         }
@@ -49,9 +57,12 @@ namespace Zapp.Config
                 return Prefab();
             }
 
-            string content = file.ReadAllText(filePath);
+            var content = file.ReadAllText(filePath);
+            var configFromDisk = JsonConvert.DeserializeObject<ZappConfig>(content);
 
-            return JsonConvert.DeserializeObject<ZappConfig>(content);
+            configValidator.ValidateAndThrow(configFromDisk);
+
+            return configFromDisk;
         }
 
         private ZappConfig Prefab()

@@ -56,6 +56,9 @@
       <HintPath>..\packages\Castle.Core.3.3.3\lib\net45\Castle.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="FluentValidation, Version=7.0.0.0, Culture=neutral, PublicKeyToken=7de548da2fbae0f0, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentValidation.7.1.0\lib\net45\FluentValidation.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=2.0.7.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.7\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
@@ -165,7 +168,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\AssetsHelper.cs" />
+    <Compile Include="Catalogue\FusionCatalogueIntegrationTests.cs" />
+    <Compile Include="Catalogue\FusionCatalogueTests.cs" />
+    <Compile Include="ClassThatRequiresLog.cs" />
+    <Compile Include="Deploy\DeployAnnouncementTests.cs" />
     <Compile Include="Fuse\FusionProcessConfigEntryTests.cs" />
+    <Compile Include="Moq\IMoqSequence.cs" />
+    <Compile Include="Moq\MoqSequence.cs" />
+    <Compile Include="Moq\MoqSequenceExtensions.cs" />
     <Compile Include="Pack\PackageVersionValidatorTests.cs" />
     <Compile Include="ZappModuleTests.cs" />
     <Compile Include="Deploy\DeployServiceTests.cs" />

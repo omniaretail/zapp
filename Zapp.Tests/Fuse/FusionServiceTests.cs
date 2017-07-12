@@ -9,6 +9,7 @@ using System.Threading;
 using Zapp.Config;
 using Zapp.Deploy;
 using Zapp.Extensions;
+using Zapp.Moq;
 using Zapp.Pack;
 using Zapp.Sync;
 
@@ -66,18 +67,19 @@ namespace Zapp.Fuse
             var versionValidatorMock = fixture.Freeze<Mock<IPackageVersionValidator>>();
             var extractorMock = fixture.Freeze<Mock<IFusionExtracter>>();
 
-            using (Sequence.Create())
-            {
-                announcementMock.Setup(_ => _.GetFusionIds()).InSequence(Times.Once()).Returns(() => new[] { "test" });
-                announcementMock.Setup(_ => _.GetPackageVersions(It.IsAny<string>())).InSequence(Times.Once());
-                versionValidatorMock.Setup(_ => _.ConfirmAvailability(It.IsAny<IEnumerable<PackageVersion>>())).InSequence(Times.Once());
-                builderMock.Setup(_ => _.Build(It.IsAny<FusePackConfig>(), It.IsAny<IFusion>(), It.IsAny<IEnumerable<PackageVersion>>())).InSequence(Times.Once());
-                extractorMock.Setup(_ => _.Extract(It.IsAny<FusePackConfig>(), It.IsAny<Stream>())).InSequence(Times.Once());
+            var seq = new MoqSequence();
 
-                var sut = fixture.Create<FusionService>();
+            announcementMock.Setup(_ => _.GetFusionIds()).InSequence(seq).Returns(() => new[] { "test" });
+            announcementMock.Setup(_ => _.GetPackageVersions(It.IsAny<string>())).InSequence(seq);
+            versionValidatorMock.Setup(_ => _.ConfirmAvailability(It.IsAny<IEnumerable<PackageVersion>>())).InSequence(seq);
+            builderMock.Setup(_ => _.Build(It.IsAny<FusePackConfig>(), It.IsAny<IFusion>(), It.IsAny<IEnumerable<PackageVersion>>())).InSequence(seq);
+            extractorMock.Setup(_ => _.Extract(It.IsAny<FusePackConfig>(), It.IsAny<Stream>())).InSequence(seq);
 
-                Assert.That(() => sut.Extract(announcementMock.Object, CancellationToken.None), Throws.Nothing);
-            }
+            var sut = fixture.Create<FusionService>();
+
+            Assert.That(() => sut.Extract(announcementMock.Object, CancellationToken.None), Throws.Nothing);
+
+            seq.Verify();
         }
     }
 }

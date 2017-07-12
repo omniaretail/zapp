@@ -126,7 +126,7 @@ namespace Zapp.Schedule
 
             if (process?.Start() != true)
             {
-                throw new ScheduleException(null, FusionId); // todo: add message
+                throw new ScheduleException(ScheduleException.SpawnFailure, FusionId);
             }
 
             CpuCounter.InstanceName = process.ProcessName;
@@ -144,6 +144,8 @@ namespace Zapp.Schedule
         {
             restApiPort = port;
 
+            logService.Info($"Fusion: '{FusionId}' it's rest port ({port}) has been received successfully.");
+
             ChangeState(FusionProcessState.Announced);
         }
 
@@ -157,6 +159,8 @@ namespace Zapp.Schedule
             using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
                 await client.GetWithFailurePolicyAsync(startupAction, httpFailurePolicy, token);
+
+                logService.Info($"Fusion: '{FusionId}' it's statup event has been called with success.");
             }
         }
 
@@ -169,9 +173,17 @@ namespace Zapp.Schedule
         {
             isAutoRestartEnabled = false;
 
+            if (State != FusionProcessState.Started)
+            {
+                logService.Warn($"Fusion: '{FusionId}' was not requested to terminate, because it's state was not passed '{nameof(FusionProcessState.Started)}'.");
+                return;
+            }
+
             using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
                 await client.GetWithFailurePolicyAsync(teardownAction, httpFailurePolicy, token);
+
+                logService.Info($"Fusion: '{FusionId}' it's terminate event has been called with success.");
             }
         }
 
@@ -179,7 +191,10 @@ namespace Zapp.Schedule
         /// Called when the interceptors are informed.
         /// </summary>
         /// <inheritdoc />
-        public void OnInterceptorsInformed() => ChangeState(FusionProcessState.Started);
+        public void OnInterceptorsInformed()
+        {
+            ChangeState(FusionProcessState.Started);
+        }
 
         private void OnExited()
         {
@@ -189,6 +204,11 @@ namespace Zapp.Schedule
 
             if (!isAutoRestartEnabled || spawnThresholdReached)
             {
+                if (spawnThresholdReached)
+                {
+                    logService.Fatal($"Fusion: '{FusionId}' it's spawn threshold ({maxNrOfRespawns}) has been reached.");
+                }
+
                 ChangeState(FusionProcessState.Dead);
                 return;
             }
@@ -244,6 +264,8 @@ namespace Zapp.Schedule
             {
                 StartedAt = null;
             }
+
+            logService.Info($"Fusion: '{FusionId}' it's state changed to: '{State.ToString()}'.");
         }
 
         /// <summary>

@@ -1,7 +1,4 @@
-﻿using Newtonsoft.Json;
-using NUnit.Framework;
-using System;
-using System.IO;
+﻿using NUnit.Framework;
 
 namespace Zapp.Config
 {
@@ -21,18 +18,6 @@ namespace Zapp.Config
             Assert.That(sut.IsGcServerEnabled, Is.EqualTo(false));
             Assert.That(sut.IsGcConcurrentEnabled, Is.EqualTo(true));
             Assert.That(sut.IsGcVeryLargeObjectsAllowed, Is.EqualTo(false));
-        }
-
-        [Test]
-        public void JsonConvert_FromAlias_ActsAsExpected()
-        {
-            var json = "{ rootDir: 'A', entryPattern: 'B', fusionDirPattern: 'C', fusions: [] }";
-            var sut = JsonConvert.DeserializeObject<FuseConfig>(json);
-
-            Assert.That(sut.RootDirectory, Is.EqualTo("A"));
-            Assert.That(sut.EntryPattern, Is.EqualTo("B"));
-            Assert.That(sut.FusionDirectoryPattern, Is.EqualTo("C"));
-            Assert.That(sut.Fusions, Is.Not.Null);
         }
     }
 }

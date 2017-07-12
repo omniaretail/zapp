@@ -15,6 +15,11 @@ namespace Zapp.Exceptions
         public static readonly string NotFound = "Fusion process not found.";
 
         /// <summary>
+        /// Represents a message for a failed to spawn fusion it's process;
+        /// </summary>
+        public static readonly string SpawnFailure = "Fusion process failed to spawn.";
+
+        /// <summary>
         /// Represents a message for a timed out fusion it's announcement.
         /// </summary>
         public static readonly string TimedOut = "Fusion process it's announcement has timed out.";
