@@ -47,7 +47,6 @@ namespace Zapp.Deploy
                 validatorMock.Setup(_ => _.ConfirmAvailability(versions)).InSequence(Times.Once());
                 announcementFactoryMock.Setup(_ => _.CreateNew(new string[0], versions)).InSequence(Times.Once()).Returns(() => announcementMock.Object);
                 scheduleMock.Setup(_ => _.ScheduleAsync(announcementMock.Object, token)).InSequence(Times.Once()).Returns(Task.FromResult(true));
-                syncMock.Setup(_ => _.AnnounceAsync(announcementMock.Object, token)).InSequence(Times.Once()).Returns(Task.FromResult(true));
 
                 var sut = fixture.Create<DeployService>();
 

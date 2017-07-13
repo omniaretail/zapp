@@ -16,5 +16,12 @@ namespace Zapp.Deploy
         /// <param name="versions">Collection of package versions.</param>
         /// <param name="token">Token of cancellation.</param>
         Task AnnounceAsync(IEnumerable<PackageVersion> versions, CancellationToken token);
+
+        /// <summary>
+        /// Publishes a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        /// <param name="token">Token of cancellation.</param>
+        Task PublishAsync(IEnumerable<PackageVersion> versions, CancellationToken token);
     }
 }

@@ -15,16 +15,16 @@ namespace Zapp.Fuse
         [Test]
         public void Extract_WhenCalled_ExtractsFilesToDirectory()
         {
-            var cfg = new FusePackConfig { Id = "test" };
-            var fuseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test");
+            var cfg = new FusePackConfig { Id = "test" }; 
+            var fuseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test"); 
 
-            var contentStream = AssetsHelper.Read("test.zip");
+            var contentStream = AssetsHelper.Read("test.zip"); 
 
             kernel.GetMock<IFusionCatalogue>()
-                .Setup(_ => _.CreateLocation(cfg.Id))
+                .Setup(_ => _.CreateLocation(cfg.Id)) 
                 .Returns(() => fuseDir);
 
-            var sut = GetSystemUnderTest();
+            var sut = GetSystemUnderTest(); 
 
             try
             {
@@ -32,14 +32,14 @@ namespace Zapp.Fuse
 
                 var dirInfo = new DirectoryInfo(fuseDir);
 
-                Assert.That(dirInfo.GetFiles(), Is.Not.Empty);
+                Assert.That(dirInfo.GetFiles(), Is.Not.Empty); 
 
                 kernel.GetMock<ILog>()
                     .Verify(_ => _.Info(It.IsAny<string>()), Times.Once);
 
                 kernel.GetMock<IFusionMaid>()
                     .Verify(_ => _.CleanAll(cfg.Id), Times.Once);
-            }
+            }   
             finally
             {
                 if (Directory.Exists(fuseDir))

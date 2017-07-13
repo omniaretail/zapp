@@ -26,10 +26,10 @@ namespace Zapp.Sync
         Task<string> GetVersionAsync(string packageId);
 
         /// <summary>
-        /// Announces the versions to the server.
+        /// Publishes the versions to the server.
         /// </summary>
-        /// <param name="announcement">Announcement that needs to be synchronized.</param>
+        /// <param name="announcement">Announcement that needs to be published.</param>
         /// <param name="token">Token used to cancel the announcement.</param>
-        Task AnnounceAsync(IDeployAnnouncement announcement, CancellationToken token);
+        Task PublishAsync(IDeployAnnouncement announcement, CancellationToken token);
     }
 }

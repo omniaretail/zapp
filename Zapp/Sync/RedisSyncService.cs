@@ -80,12 +80,12 @@ namespace Zapp.Sync
         }
 
         /// <summary>
-        /// Announces the versions to the server.
+        /// Publishes the versions to the server.
         /// </summary>
-        /// <param name="announcement">Announcement that needs to be synchronized.</param>
+        /// <param name="announcement">Announcement that needs to be published.</param>
         /// <param name="token">Token used to cancel the announcement.</param>
         /// <inheritDoc />
-        public async Task AnnounceAsync(IDeployAnnouncement announcement, CancellationToken token)
+        public async Task PublishAsync(IDeployAnnouncement announcement, CancellationToken token)
         {
             EnsureArg.IsNotNull(announcement, nameof(announcement));
 
@@ -102,11 +102,11 @@ namespace Zapp.Sync
             {
                 token.ThrowIfCancellationRequested();
 
-                await AnnounceAsync(version);
+                await PublishAsync(version);
             }
         }
 
-        private async Task AnnounceAsync(PackageVersion version)
+        private async Task PublishAsync(PackageVersion version)
         {
             EnsureArg.IsNotNull(version, nameof(version));
 

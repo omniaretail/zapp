@@ -60,7 +60,25 @@ namespace Zapp.Deploy
             var announcement = announcementFactory.CreateNew(new string[0], versions);
 
             await scheduleService.ScheduleAsync(announcement, token);
-            await syncService.AnnounceAsync(announcement, token);
+        }
+
+        /// <summary>
+        /// Publishes a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        /// <param name="token">Token of cancellation.</param>
+        /// <inheritdoc />
+        public async Task PublishAsync(IEnumerable<PackageVersion> versions, CancellationToken token)
+        {
+            EnsureArg.IsNotNull(versions, nameof(versions));
+
+            versions = versions.Stale();
+
+            packageVersionValidator.ConfirmAvailability(versions);
+
+            var announcement = announcementFactory.CreateNew(new string[0], versions);
+
+            await syncService.PublishAsync(announcement, token);
         }
     }
 }

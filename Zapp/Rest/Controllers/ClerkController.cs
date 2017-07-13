@@ -8,6 +8,7 @@ using System.Web.Http;
 using System.Web.Http.Results;
 using Zapp.Deploy;
 using Zapp.Pack;
+using Zapp.Sync;
 
 namespace Zapp.Rest.Controllers
 {
@@ -17,18 +18,24 @@ namespace Zapp.Rest.Controllers
     public class ClerkController : ApiController
     {
         private readonly ILog logService;
+
+        private readonly ISyncService syncService;
         private readonly IDeployService deployService;
 
         /// <summary>
         /// Initializes a new <see cref="ClerkController"/>.
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
+        /// <param name="syncService">Service used to synchronize the packages.</param>
         /// <param name="deployService">Service used for announcing deployments.</param>
         public ClerkController(
             ILog logService,
+            ISyncService syncService,
             IDeployService deployService)
         {
             this.logService = logService;
+
+            this.syncService = syncService;
             this.deployService = deployService;
         }
 
@@ -66,6 +73,29 @@ namespace Zapp.Rest.Controllers
             catch (Exception ex)
             {
                 logService.Fatal("Announcement failed.", ex);
+                throw;
+            }
+
+            return StatusCode(HttpStatusCode.OK);
+        }
+
+        /// <summary>
+        /// Publishes a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        /// <param name="token">Token that is used to keep track of cancelled requests.</param>        
+        [HttpPost, Route("api/clerk/publish/")]
+        public async Task<StatusCodeResult> Publish(
+            [FromBody]IReadOnlyCollection<PackageVersion> versions,
+            CancellationToken token)
+        {
+            try
+            {
+                await deployService.PublishAsync(versions, token);
+            }
+            catch (Exception ex)
+            {
+                logService.Fatal("Publication failed.", ex);
                 throw;
             }
 
