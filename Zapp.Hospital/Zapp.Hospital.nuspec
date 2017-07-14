@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>$id$</id>
+    <version>0.0.1</version>
+    <title>Zapp</title>
+    <description>A plugin package for Zapp to construct health checks for a fusion.</description>
+    <authors>Omnia Retail</authors>
+    <owners>Omnia Retail</owners>
+    <projectUrl>https://github.com/omniaretail/zapp</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/omniaretail/zapp/master/icon-hospital.png</iconUrl>
+    <tags>zapp hospital windows process orchestrator zip packages fuse</tags>
+  </metadata>
+</package>
