@@ -32,6 +32,10 @@ namespace Zapp.Catalogue
             kernel.GetMock<IDirectoryInfoFactory>()
                 .Setup(_ => _.CreateNew(It.IsAny<string>()))
                 .Returns(() => kernel.GetMock<IDirectoryInfo>().Object);
+
+            kernel.GetMock<IDirectoryInfo>()
+                .Setup(_ => _.Exists)
+                .Returns(true);
         }
 
         [Test]

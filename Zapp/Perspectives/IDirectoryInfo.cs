@@ -11,5 +11,15 @@ namespace Zapp.Perspectives
         /// <see cref="DirectoryInfo.GetDirectories()"/>
         /// </summary>
         DirectoryInfo[] GetDirectories();
+
+        /// <summary>
+        /// <see cref="DirectoryInfo.Exists"/>
+        /// </summary>
+        bool Exists { get; }
+
+        /// <summary>
+        /// <see cref="DirectoryInfo.Create()"/>
+        /// </summary>
+        void Create();
     }
 }

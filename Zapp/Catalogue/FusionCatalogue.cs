@@ -40,6 +40,11 @@ namespace Zapp.Catalogue
             this.directoryInfoFactory = directoryInfoFactory;
 
             rootDirectory = FormatRootDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
+            if (!Directory.Exists(rootDirectory))
+            {
+                Directory.CreateDirectory(rootDirectory);
+            }
         }
 
         /// <summary>
@@ -82,6 +87,11 @@ namespace Zapp.Catalogue
             var pattern = FormatFusionDirectory(fusionId, "*");
             var ant = antFactory.CreateNew(pattern);
             var rootInfo = directoryInfoFactory.CreateNew(rootDirectory);
+
+            if (!rootInfo.Exists)
+            {
+                return new string[0];
+            }
 
             return rootInfo
                 .GetDirectories()
