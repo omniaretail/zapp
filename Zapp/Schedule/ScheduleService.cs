@@ -37,6 +37,7 @@ namespace Zapp.Schedule
         private IDictionary<string, IFusionProcess> processes;
 
         private SemaphoreSlim syncLock;
+        private bool isFullCompleted;
 
         /// <summary>
         /// Represents the current running processes.
@@ -92,7 +93,17 @@ namespace Zapp.Schedule
             var announcement = announcementFactory
                 .CreateNew(fusionIds, new PackageVersion[0]);
 
-            await ScheduleAsync(announcement, token);
+            try
+            {
+                await ScheduleAsync(announcement, token);
+            }
+            catch (Exception ex) when (
+                !isFullCompleted &&
+                configStore?.Value?.Fuse?.IgnoreInitialScheduleFailure == true
+            )
+            {
+                logService.Warn("Initial schedule failed.", ex);
+            }
         }
 
         /// <summary>
@@ -110,6 +121,12 @@ namespace Zapp.Schedule
                 .OrderBy(_ => GetOrderId(_))
                 .Stale();
 
+            if (!isFullCompleted &&
+                announcement.IsDelta())
+            {
+                throw new ScheduleException(ScheduleException.FullAnnouncementRequired, "*");
+            }
+
             await syncLock.WaitAsync();
 
             try
@@ -120,12 +137,9 @@ namespace Zapp.Schedule
 
                 logService.Info("Terminated all active fusion(s).");
 
-                if (announcement.IsDelta())
-                {
-                    fusionService.Extract(announcement, token); // extracts the new fusions
+                fusionService.Extract(announcement, token); // extracts the new fusions
 
-                    logService.Info("Extracted all new fusion(s).");
-                }
+                logService.Info("Extracted all new fusion(s).");
 
                 var newProcesses = SpawnMultiple(fusionIds, token).Stale(); // spawns the services
 
@@ -147,6 +161,11 @@ namespace Zapp.Schedule
                 ResumeAll(token);
 
                 logService.Info("Resumed all drainers, deployment completed.");
+
+                if (!announcement.IsDelta())
+                {
+                    isFullCompleted = true;
+                }
             }
             finally
             {

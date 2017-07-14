@@ -55,5 +55,11 @@ namespace Zapp.Config
         /// </summary>
         [JsonProperty("isGcVeryLargeObjectsAllowed")]
         public bool IsGcVeryLargeObjectsAllowed { get; set; } = false;
+
+        /// <summary>
+        /// Represents a setting that indicates if zapp should ignore an initial schedule failure.
+        /// </summary>
+        [JsonProperty("ignoreInitialScheduleFailure")]
+        public bool IgnoreInitialScheduleFailure = true;
     }
 }

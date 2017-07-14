@@ -30,6 +30,11 @@ namespace Zapp.Exceptions
         public static readonly string Dead = "Fusion process failed to start, caused death.";
 
         /// <summary>
+        /// Represents a message for when a full announcement is required.
+        /// </summary>
+        public static readonly string FullAnnouncementRequired = "Zapp requires a full announcement to function before any delta.";
+
+        /// <summary>
         /// Represents the id of the fusion where the error occurred on.
         /// </summary>
         public string FusionId { get; set; }

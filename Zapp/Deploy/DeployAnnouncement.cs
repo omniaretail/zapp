@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Zapp.Config;
 using Zapp.Extensions;
 using Zapp.Fuse;
 using Zapp.Pack;
@@ -13,6 +14,7 @@ namespace Zapp.Deploy
     /// </summary>
     public class DeployAnnouncement : IDeployAnnouncement
     {
+        private readonly IConfigStore configStore;
         private readonly IFusionService fusionService;
 
         private readonly IReadOnlyCollection<PackageVersion> packageVersions;
@@ -21,10 +23,12 @@ namespace Zapp.Deploy
         /// <summary>
         /// Initializes a new <see cref="DeployAnnouncement"/> with the new <paramref name="packageVersions"/> that needs to be deployed.
         /// </summary>
+        /// <param name="configStore">Store used to get information from the configuration.</param>
         /// <param name="fusionService">Service used to get info for package fusions.</param>
         /// <param name="fusionIds">Ids of the fusions that needs to be deployed. (empty if <paramref name="packageVersions"/> is specified).</param>
         /// <param name="packageVersions">Versions of the packages that needs to be deployed. (empty if <paramref name="fusionIds"/> is specified).</param>
         public DeployAnnouncement(
+            IConfigStore configStore,
             IFusionService fusionService,
             IEnumerable<string> fusionIds,
             IEnumerable<PackageVersion> packageVersions)
@@ -32,6 +36,7 @@ namespace Zapp.Deploy
             EnsureArg.IsNotNull(fusionIds, nameof(fusionIds));
             EnsureArg.IsNotNull(packageVersions, nameof(packageVersions));
 
+            this.configStore = configStore;
             this.fusionService = fusionService;
 
             var fusionIdsStale = fusionIds.StaleReadOnly();
@@ -49,7 +54,13 @@ namespace Zapp.Deploy
         /// Indicates if this deployment is a delta.
         /// </summary>
         /// <inheritDoc />
-        public bool IsDelta() => packageVersions?.Any() == true;
+        public bool IsDelta()
+        {
+            var nrOfExpectedFusions = configStore.Value.Fuse.Fusions.Count;
+            var nrOfAnnouncedFusions = affectedFusionIds.Count;
+
+            return nrOfAnnouncedFusions != nrOfExpectedFusions;
+        }
 
         /// <summary>
         /// Gets the fusions that are touched by the deployment.

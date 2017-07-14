@@ -1,6 +1,8 @@
 ﻿using Ninject;
 using Ninject.Extensions.Factory;
 using NUnit.Framework;
+using System.Collections.Generic;
+using Zapp.Config;
 using Zapp.Pack;
 
 namespace Zapp.Deploy
@@ -12,24 +14,30 @@ namespace Zapp.Deploy
         {
             base.Setup();
 
+            config.Fuse.Fusions = new List<FusePackConfig>()
+            {
+                new FusePackConfig { Id = "fusion1" },
+                new FusePackConfig { Id = "fusion2" }
+            };
+
             kernel.Bind<IDeployAnnouncement>().To<DeployAnnouncement>();
             kernel.Bind<IDeployAnnouncementFactory>().ToFactory();
-        } 
-
-        [Test]
-        public void IsDelta_WhenPackageVersionsIsEmpty_ReturnsFalse()
-        {
-            var sut = WithFusionIds(new[] { "fusionId" });
-
-            Assert.That(sut.IsDelta(), Is.False);
         }
 
         [Test]
-        public void IsDelta_WhenPackageVersionsIsNotEmpty_ReturnsTrue()
+        public void IsDelta_WhenAffectedFusionIdsDoesNotMatchConfigured_ReturnsTrue()
         {
-            var sut = WithPackageVersions(new[] { new PackageVersion("a", "b") });
+            var sut = WithFusionIds(new[] { "fusion1" });
 
             Assert.That(sut.IsDelta(), Is.True);
+        }
+
+        [Test]
+        public void IsDelta_WhenAffectedFusionIdsMatchesConfigured_ReturnsFalse()
+        {
+            var sut = WithFusionIds(new[] { "fusion1", "fusion2" });
+
+            Assert.That(sut.IsDelta(), Is.False);
         }
 
         private DeployAnnouncement WithPackageVersions(params PackageVersion[] packageVersions)

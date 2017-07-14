@@ -55,10 +55,7 @@ namespace Zapp.Server
             try
             {
                 syncService.Connect();
-
                 apiService.Listen();
-
-                fusionService.ExtractAll(token);
 
                 await scheduleService.ScheduleAllAsync(token);
             }
