@@ -80,6 +80,23 @@ namespace Zapp.Rest.Controllers
         }
 
         /// <summary>
+        /// Publishes the new deployed version of a package.
+        /// </summary>
+        /// <param name="packageId">Identity of the package.</param>
+        /// <param name="deployVersion">Deploy version of the package.</param>
+        /// <param name="token">Token that is used to keep track of cancelled requests.</param>
+        [HttpGet, Route("api/clerk/publish/{packageId}/{deployVersion}")]
+        public async Task<StatusCodeResult> Publish(
+            string packageId,
+            string deployVersion,
+            CancellationToken token)
+        {
+            var versions = new[] { new PackageVersion(packageId, deployVersion) };
+
+            return await Publish(versions, token);
+        }
+
+        /// <summary>
         /// Publishes a new collection of package versions.
         /// </summary>
         /// <param name="versions">Collection of package versions.</param>
