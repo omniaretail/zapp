@@ -1,11 +1,11 @@
 ﻿using Moq;
-using Moq.Sequences;
 using NUnit.Framework;
 using Ploeh.AutoFixture;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Zapp.Fuse;
+using Zapp.Moq;
 using Zapp.Pack;
 using Zapp.Schedule;
 using Zapp.Sync;
@@ -40,18 +40,19 @@ namespace Zapp.Deploy
             var scheduleMock = fixture.Freeze<Mock<IScheduleService>>();
             var validatorMock = fixture.Freeze<Mock<IPackageVersionValidator>>();
 
-            using (Sequence.Create())
-            {
-                var token = CancellationToken.None;
+            var sequence = new MoqSequence();
 
-                validatorMock.Setup(_ => _.ConfirmAvailability(versions)).InSequence(Times.Once());
-                announcementFactoryMock.Setup(_ => _.CreateNew(new string[0], versions)).InSequence(Times.Once()).Returns(() => announcementMock.Object);
-                scheduleMock.Setup(_ => _.ScheduleAsync(announcementMock.Object, token)).InSequence(Times.Once()).Returns(Task.FromResult(true));
+            var token = CancellationToken.None;
 
-                var sut = fixture.Create<DeployService>();
+            validatorMock.Setup(_ => _.ConfirmAvailability(versions)).InSequence(sequence);
+            announcementFactoryMock.Setup(_ => _.CreateNew(new string[0], versions)).InSequence(sequence).Returns(() => announcementMock.Object);
+            scheduleMock.Setup(_ => _.ScheduleAsync(announcementMock.Object, token)).InSequence(sequence).Returns(Task.FromResult(true));
 
-                Assert.That(() => sut.AnnounceAsync(versions, token), Throws.Nothing);
-            }
+            var sut = fixture.Create<DeployService>();
+
+            Assert.That(() => sut.AnnounceAsync(versions, token), Throws.Nothing);
+
+            sequence.Verify();
         }
     }
 }

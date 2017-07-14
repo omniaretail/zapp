@@ -1,5 +1,4 @@
 ﻿using Moq;
-using Moq.Sequences;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Ploeh.AutoFixture;
