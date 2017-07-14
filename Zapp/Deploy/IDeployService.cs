@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Zapp.Pack;
 
 namespace Zapp.Deploy
@@ -9,15 +11,17 @@ namespace Zapp.Deploy
     public interface IDeployService
     {
         /// <summary>
-        /// Announces a new version of a package.
-        /// </summary>
-        /// <param name="version">Version of the package.</param>
-        AnnounceResult Announce(PackageVersion version);
-
-        /// <summary>
         /// Announces a new collection of package versions.
         /// </summary>
         /// <param name="versions">Collection of package versions.</param>
-        AnnounceResult Announce(IReadOnlyCollection<PackageVersion> versions);
+        /// <param name="token">Token of cancellation.</param>
+        Task AnnounceAsync(IEnumerable<PackageVersion> versions, CancellationToken token);
+
+        /// <summary>
+        /// Publishes a new collection of package versions.
+        /// </summary>
+        /// <param name="versions">Collection of package versions.</param>
+        /// <param name="token">Token of cancellation.</param>
+        Task PublishAsync(IEnumerable<PackageVersion> versions, CancellationToken token);
     }
 }

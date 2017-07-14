@@ -1,36 +1,42 @@
-﻿using log4net;
+﻿using EnsureThat;
+using log4net;
 using System;
 using System.IO;
 using System.IO.Compression;
+using Zapp.Catalogue;
 using Zapp.Config;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Fuse
 {
     /// <summary>
     /// Represents an implementation of <see cref="IFusionExtracter"/> which extracts fusions to disk.
     /// </summary>
-    public class FileFusionExtractor : IFusionExtracter
+    public class FusionExtractor : IFusionExtracter
     {
         private readonly ILog logService;
         private readonly IConfigStore configStore;
 
-        private readonly string fusionRootDirectory;
+        private readonly IFusionMaid fusionMaid;
+        private readonly IFusionCatalogue fusionCatalogue;
 
         /// <summary>
-        /// Initializes a new <see cref="FileFusionExtractor"/>.
+        /// Initializes a new <see cref="FusionExtractor"/>.
         /// </summary>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Store used for configuration loading.</param>
-        public FileFusionExtractor(
+        /// <param name="fusionMaid">Virtual maid that cleans the old fusions.</param>
+        /// <param name="fusionCatalogue">Catalogue used to resolve locations of fusions.</param>
+        public FusionExtractor(
             ILog logService,
-            IConfigStore configStore)
+            IConfigStore configStore,
+            IFusionMaid fusionMaid,
+            IFusionCatalogue fusionCatalogue)
         {
             this.logService = logService;
             this.configStore = configStore;
 
-            fusionRootDirectory = this.configStore.Value?.Fuse?
-                .GetActualRootDirectory();
+            this.fusionMaid = fusionMaid;
+            this.fusionCatalogue = fusionCatalogue;
         }
 
         /// <summary>
@@ -42,24 +48,21 @@ namespace Zapp.Fuse
         /// <inheritdoc />
         public void Extract(FusePackConfig config, Stream contentStream)
         {
-            Guard.ParamNotNull(config, nameof(config));
-            Guard.ParamNotNull(contentStream, nameof(contentStream));
+            EnsureArg.IsNotNull(config, nameof(config));
+            EnsureArg.IsNotNull(contentStream, nameof(contentStream));
 
-            var fusionDirectory = configStore.Value?.Fuse?
-                .GetActualFusionDirectory(config.Id);
+            fusionMaid.CleanAll(config.Id);
 
-            if (Directory.Exists(fusionDirectory))
-            {
-                Directory.Delete(fusionDirectory, true);
-            }
+            var fusionLocation = fusionCatalogue
+                .CreateLocation(config.Id);
 
-            Directory.CreateDirectory(fusionDirectory);
+            Directory.CreateDirectory(fusionLocation);
 
             using (var archive = new ZipArchive(contentStream))
             {
-                archive.ExtractToDirectory(fusionDirectory);
+                archive.ExtractToDirectory(fusionLocation);
 
-                logService.Info($"fusion {config.Id} extracted.");
+                logService.Info($"Fusion: '{config.Id}' has been extracted to disk.");
             }
         }
     }

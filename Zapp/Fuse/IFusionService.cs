@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
+using Zapp.Deploy;
 using Zapp.Pack;
 
 namespace Zapp.Fuse
@@ -9,32 +11,28 @@ namespace Zapp.Fuse
     public interface IFusionService
     {
         /// <summary>
-        /// Starts to extract all the packages.
+        /// Extracts all configured fusions.
         /// </summary>
-        bool TryExtract();
+        /// <param name="token">Token of cancellation.</param>
+        void ExtractAll(CancellationToken token);
 
         /// <summary>
-        /// Tries to create a new fusion extraction.
+        /// Extracts a deploy anncouncement.
         /// </summary>
-        /// <param name="fusionId">Identity of the fusion.</param>
-        bool TryExtractFusion(string fusionId);
-
-        /// <summary>
-        /// Tries to create new fusion extractions.
-        /// </summary>
-        /// <param name="fusionIds">Identities of the fusion.</param>
-        bool TryExtractFusionBatch(IReadOnlyCollection<string> fusionIds);
+        /// <param name="announcement">The announcement that needs to be extracted.</param>
+        /// <param name="token">Token of cancellation.</param>
+        void Extract(IDeployAnnouncement announcement, CancellationToken token);
 
         /// <summary>
         /// Searches for affected fusion packages.
         /// </summary>
         /// <param name="packageId">Identity of the package.</param>
-        IReadOnlyCollection<string> GetAffectedFusions(string packageId);
+        IEnumerable<string> GetAffectedFusions(string packageId);
 
         /// <summary>
         /// Gets the package versions from the sync-service for a specific fusion.
         /// </summary>
         /// <param name="fusionId">Identity of the fusion.</param>
-        IReadOnlyCollection<PackageVersion> GetPackageVersions(string fusionId);
+        IEnumerable<PackageVersion> GetPackageVersions(string fusionId);
     }
 }

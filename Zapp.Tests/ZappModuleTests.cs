@@ -26,14 +26,22 @@ namespace Zapp
                 .Where(t => !pluginTypes.Contains(t.Name))
                 .ToList();
 
-            var kernel =  new StandardKernel(new ZappModule());
+            var kernel = new StandardKernel(new ZappModule());
 
             foreach (var @case in testCases)
             {
                 var bindings = kernel.GetBindings(@case);
 
-                Assert.That(bindings, Is.Not.Empty, $"Intefrace {@case.Name} does not have a proper binding for module {nameof(ZappModule)}.");
+                Assert.That(bindings, Is.Not.Empty, $"Interface {@case.Name} does not have a proper binding for module {nameof(ZappModule)}.");
             }
+        }
+
+        [Test]
+        public void Kernel_WhenInstanceRequestsLog_ThrowsNothing()
+        {
+            var kernel = new StandardKernel(new ZappModule());
+
+            Assert.That(() => kernel.Get<ClassThatRequiresLog>(), Throws.Nothing);
         }
     }
 }

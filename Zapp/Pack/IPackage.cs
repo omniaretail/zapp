@@ -15,6 +15,6 @@ namespace Zapp.Pack
         /// <summary>
         /// Get the entries of the package.
         /// </summary>
-        IReadOnlyCollection<IPackageEntry> GetEntries();
+        IEnumerable<IPackageEntry> GetEntries();
     }
 }

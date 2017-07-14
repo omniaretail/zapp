@@ -1,4 +1,5 @@
 ﻿using Zapp.Config;
+using Zapp.Core;
 using Zapp.Fuse;
 using Zapp.Pack;
 
@@ -26,6 +27,10 @@ namespace Zapp.Example
             if (metaEntry != null)
             {
                 metaEntry.SetInfo(FusionMetaEntry.ExecutableInfoKey, config.Id);
+                metaEntry.SetInfo(ZappVariables.StartupAssemblyNameFusionInfoKey, "SuperExitingApp1");
+                metaEntry.SetInfo(ZappVariables.TeardownAssemblyNameFusionInfoKey, "SuperExitingApp1");
+                metaEntry.SetInfo(ZappVariables.TeardownTypeNameFusionInfoKey, "SuperExitingClass1");
+                metaEntry.SetInfo(ZappVariables.TeardownMethodNameFusionInfoKey, "Teardown");
             }
         }
     }

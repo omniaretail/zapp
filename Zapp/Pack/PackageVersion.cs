@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using EnsureThat;
+using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Pack
 {
@@ -40,7 +40,7 @@ namespace Zapp.Pack
         [JsonConstructor]
         public PackageVersion(string packageId, string deployVersion = unknownVersion)
         {
-            Guard.ParamNotNullOrEmpty(packageId, nameof(packageId));
+            EnsureArg.IsNotNullOrEmpty(packageId, nameof(packageId));
 
             PackageId = packageId;
             DeployVersion = deployVersion ?? unknownVersion;

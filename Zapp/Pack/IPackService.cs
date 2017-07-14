@@ -16,11 +16,5 @@
         /// </summary>
         /// <param name="version">Version of the package.</param>
         IPackage LoadPackage(PackageVersion version);
-
-        /// <summary>
-        /// Deploys the new package.
-        /// </summary>
-        /// <param name="version">Version of the package.</param>
-        PackDeployResult Deploy(PackageVersion version);
     }
 }

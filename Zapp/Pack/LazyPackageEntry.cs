@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
+﻿using EnsureThat;
+using System.Diagnostics;
 using System.IO;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Pack
 {
@@ -25,8 +25,8 @@ namespace Zapp.Pack
         /// <param name="lazyStream">Promise-style stream delegate.</param>
         public LazyPackageEntry(string name, LazyStream lazyStream)
         {
-            Guard.ParamNotNullOrEmpty(name, nameof(name));
-            Guard.ParamNotNull(lazyStream, nameof(lazyStream));
+            EnsureArg.IsNotNullOrEmpty(name, nameof(name));
+            EnsureArg.IsNotNull(lazyStream, nameof(lazyStream));
 
             Name = name;
 

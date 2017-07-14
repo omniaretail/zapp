@@ -1,4 +1,7 @@
-﻿namespace Zapp.Server
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace Zapp.Server
 {
     /// <summary>
     /// Represents a interface which is responsible for all the actions.
@@ -8,6 +11,7 @@
         /// <summary>
         /// Starts the instance of <see cref="IZappServer"/> and it's dependencies.
         /// </summary>
-        void Start();
+        /// <param name="token">Token used to cancel the startup.</param>
+        Task StartAsync(CancellationToken token);
     }
 }

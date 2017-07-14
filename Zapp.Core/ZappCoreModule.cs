@@ -1,6 +1,7 @@
 ﻿using Ninject.Extensions.Factory;
 using Ninject.Modules;
 using System.Web.Http.Dispatcher;
+using Zapp.Core.Extensions;
 using Zapp.Core.NuGet;
 using Zapp.Core.Owin;
 
@@ -18,6 +19,8 @@ namespace Zapp.Core
             Bind<IAssembliesResolverFactory>().ToFactory();
 
             Bind<INuGetPackageResolver>().To<XmlNuGetPackageResolver>().InSingletonScope();
+
+            Bind<IHttpFailurePolicy>().To<AckHttpFailurePolicy>().InSingletonScope();
         }
     }
 }

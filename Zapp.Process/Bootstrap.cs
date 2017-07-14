@@ -16,13 +16,12 @@ namespace Zapp.Process
         /// <param name="args">Arguments provided by the spawner.</param>
         public static void Main(string[] args)
         {
-            var kernel = default(IKernel);
             var zappProcess = default(IZappProcess);
             var processController = default(IProcessController);
 
             try
             {
-                using (kernel = new StandardKernel(new ZappProcessModule()))
+                using (var kernel = new StandardKernel(new ZappProcessModule()))
                 {
                     zappProcess = kernel.Get<IZappProcess>();
                     zappProcess.Start();
@@ -37,9 +36,6 @@ namespace Zapp.Process
             }
             finally
             {
-                kernel?.Dispose();
-                kernel = null;
-
                 (zappProcess as IDisposable)?.Dispose();
                 zappProcess = null;
 

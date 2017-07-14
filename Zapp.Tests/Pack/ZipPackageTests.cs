@@ -4,6 +4,7 @@ using NUnit.Framework;
 using System.IO;
 using System.Linq;
 using Zapp.Assets;
+using Zapp.Exceptions;
 
 namespace Zapp.Pack
 {
@@ -31,10 +32,7 @@ namespace Zapp.Pack
             var contentStream = new MemoryStream();
             contentStream.WriteByte(0);
 
-            var exc = Assert.Throws<PackageException>(() => factory.CreateNew(version, contentStream));
-
-            Assert.That(exc.Version, Is.EqualTo(version));
-            Assert.That(exc.InnerException, Is.InstanceOf<InvalidDataException>());
+            Assert.That(() => factory.CreateNew(version, contentStream), Throws.InstanceOf<PackageException>());
         }
 
         [Test]

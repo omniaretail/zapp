@@ -64,6 +64,12 @@
     <Reference Include="Castle.Core, Version=3.3.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
       <HintPath>..\packages\Castle.Core.3.3.3\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
+    <Reference Include="Ensure.That, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ensure.That.5.0.0\lib\net45\Ensure.That.dll</HintPath>
+    </Reference>
+    <Reference Include="FluentValidation, Version=7.0.0.0, Culture=neutral, PublicKeyToken=7de548da2fbae0f0, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentValidation.7.1.0\lib\net45\FluentValidation.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=2.0.7.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.7\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
@@ -147,6 +153,9 @@
       <HintPath>..\packages\StackExchange.Redis.1.2.1\lib\net45\StackExchange.Redis.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="StringFormat, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\StringFormat.1.0.0\lib\StringFormat.dll</HintPath>
+    </Reference>
     <Reference Include="Swashbuckle.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cd1bb07a5ac7c7bc, processorArchitecture=MSIL">
       <HintPath>..\packages\Swashbuckle.Core.5.5.3\lib\net40\Swashbuckle.Core.dll</HintPath>
       <Private>True</Private>
@@ -184,49 +193,69 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Catalogue\FusionCatalogue.cs" />
+    <Compile Include="Catalogue\IFusionCatalogue.cs" />
     <Compile Include="Config\FuseConfig.cs" />
+    <Compile Include="Config\FuseConfigValidator.cs" />
+    <Compile Include="Config\FusePackConfigValidator.cs" />
     <Compile Include="Config\IConfigStore.cs" />
     <Compile Include="Config\JsonConfigStore.cs" />
     <Compile Include="Config\PackConfig.cs" />
     <Compile Include="Config\FusePackConfig.cs" />
+    <Compile Include="Config\PackConfigValidator.cs" />
+    <Compile Include="Config\RestConfigValidator.cs" />
     <Compile Include="Config\SyncConfig.cs" />
+    <Compile Include="Config\SyncConfigValidator.cs" />
     <Compile Include="Config\ZappConfig.cs" />
     <Compile Include="Config\RestConfig.cs" />
-    <Compile Include="Deploy\AnnounceResult.cs" />
+    <Compile Include="Config\ZappConfigValidator.cs" />
+    <Compile Include="Deploy\DeployAnnouncement.cs" />
     <Compile Include="Deploy\DeployService.cs" />
+    <Compile Include="Deploy\IDeployAnnouncement.cs" />
+    <Compile Include="Deploy\IDeployAnnouncementFactory.cs" />
     <Compile Include="Deploy\IDeployService.cs" />
-    <Compile Include="Fuse\FileFusionExtractor.cs" />
+    <Compile Include="Exceptions\FusionException.cs" />
+    <Compile Include="Exceptions\SyncException.cs" />
+    <Compile Include="Exceptions\ScheduleException.cs" />
+    <Compile Include="Extensions\IEnumerableExtensions.cs" />
+    <Compile Include="Fuse\FusionExtractor.cs" />
+    <Compile Include="Fuse\FusionBuilder.cs" />
+    <Compile Include="Fuse\FusionMaid.cs" />
     <Compile Include="Fuse\FusionProcessConfigEntry.cs" />
     <Compile Include="Fuse\FusionProcessEntry.cs" />
     <Compile Include="Fuse\FusionService.cs" />
     <Compile Include="Fuse\FusionMetaEntry.cs" />
     <Compile Include="Fuse\IFrameworkPackageEntryFactory.cs" />
     <Compile Include="Fuse\IFusion.cs" />
+    <Compile Include="Fuse\IFusionMaid.cs" />
     <Compile Include="Fuse\IFusionExtracter.cs" />
     <Compile Include="Fuse\IFusionFactory.cs" />
     <Compile Include="Fuse\IFusionFilter.cs" />
     <Compile Include="Fuse\IFusionInterceptor.cs" />
     <Compile Include="Fuse\IFusionService.cs" />
+    <Compile Include="Fuse\IFusionBuilder.cs" />
     <Compile Include="Fuse\ZipFusion.cs" />
     <Compile Include="Fuse\IFrameworkPackageEntry.cs" />
     <Compile Include="Pack\IPackage.cs" />
     <Compile Include="Pack\IPackageEntry.cs" />
     <Compile Include="Pack\IPackageEntryFactory.cs" />
     <Compile Include="Pack\IPackageFactory.cs" />
+    <Compile Include="Pack\IPackageVersionValidator.cs" />
     <Compile Include="Pack\IPackService.cs" />
     <Compile Include="Pack\LazyStream.cs" />
-    <Compile Include="Pack\PackageException.cs" />
+    <Compile Include="Exceptions\PackageException.cs" />
     <Compile Include="Pack\PackageVersion.cs" />
-    <Compile Include="Pack\PackDeployResult.cs" />
+    <Compile Include="Pack\PackageVersionValidator.cs" />
     <Compile Include="Pack\FilePackService.cs" />
     <Compile Include="Pack\ZipPackage.cs" />
     <Compile Include="Pack\LazyPackageEntry.cs" />
+    <Compile Include="Perspectives\IDirectoryInfo.cs" />
+    <Compile Include="Perspectives\IDirectoryInfoFactory.cs" />
     <Compile Include="Perspectives\IFile.cs" />
     <Compile Include="Rest\Controllers\RadarController.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />
     <Compile Include="Rest\Controllers\ClerkController.cs" />
-    <Compile Include="Rest\Responses\GenericResponse.cs" />
     <Compile Include="Schedule\FusionProcess.cs" />
     <Compile Include="Schedule\FusionProcessState.cs" />
     <Compile Include="Schedule\IFusionProcess.cs" />
@@ -237,6 +266,8 @@
     <Compile Include="Schedule\ScheduleService.cs" />
     <Compile Include="Server\IZappServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Sync\ConnectionMultiplexerFactory.cs" />
+    <Compile Include="Sync\IConnectionMultiplexerFactory.cs" />
     <Compile Include="Sync\ISyncService.cs" />
     <Compile Include="Sync\RedisSyncService.cs" />
     <Compile Include="Transform\ITransformConfig.cs" />
@@ -258,6 +289,7 @@
       <Name>Zapp.Process</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

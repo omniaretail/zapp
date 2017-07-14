@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-using NUnit.Framework;
-using System.Linq;
+﻿using NUnit.Framework;
 
 namespace Zapp.Config
 {
@@ -15,17 +13,6 @@ namespace Zapp.Config
             Assert.That(sut.Id, Is.EqualTo(null));
             Assert.That(sut.Order, Is.EqualTo(0));
             Assert.That(sut.PackageIds, Is.Not.Null);
-        }
-
-        [Test]
-        public void JsonConvert_FromAlias_ActsAsExpected()
-        {
-            var json = "{ id: 'A', order: 1, packageIds: [ 'B' ] }";
-            var sut = JsonConvert.DeserializeObject<FusePackConfig>(json);
-
-            Assert.That(sut.Id, Is.EqualTo("A"));
-            Assert.That(sut.Order, Is.EqualTo(1));
-            Assert.That(sut.PackageIds.Single(), Is.EqualTo("B"));
         }
     }
 }

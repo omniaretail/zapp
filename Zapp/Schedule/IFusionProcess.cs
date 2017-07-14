@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Zapp.Schedule
 {
@@ -12,6 +14,11 @@ namespace Zapp.Schedule
         /// Represents the identity of the fusion.
         /// </summary>
         string FusionId { get; }
+
+        /// <summary>
+        /// Represents the state of the fusion.
+        /// </summary>
+        FusionProcessState State { get; }
 
         /// <summary>
         /// Represents the timestamp when the process started.
@@ -34,20 +41,26 @@ namespace Zapp.Schedule
         PerformanceCounter MemoryCounter { get; }
 
         /// <summary>
-        /// Tries to spawn an instance of the process.
+        /// Announces the port of the process.
         /// </summary>
-        bool TrySpawn();
+        /// <param name="port">Port that was received from the process.</param>
+        void Announce(int port);
 
         /// <summary>
-        /// Tries to request the process to start.
+        /// Spawns the actual process for this fusion.
         /// </summary>
-        /// <param name="port">Port where the process is bound onto.</param>
-        bool TryRequestStart(int port);
+        void Spawn();
 
         /// <summary>
-        /// Tries to request the process to stop.
+        /// Runs the startup event on the process.
         /// </summary>
-        bool TryRequestStop();
+        /// <param name="token">Token used to cancel the http request.</param>
+        Task StartupAsync(CancellationToken token);
+
+        /// <summary>
+        /// Runs the terminate event on the process.
+        /// </summary>
+        Task TerminateAsync(CancellationToken token);
 
         /// <summary>
         /// Called when the interceptors are informed.

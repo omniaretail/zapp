@@ -14,7 +14,6 @@ using System.Linq;
 using System.Net.Http.Formatting;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Security.Principal;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
@@ -26,8 +25,10 @@ namespace Zapp.Rest
     /// <summary>
     /// Represents a implementation of <see cref="IRestService"/> for the Owin NuGet package.
     /// </summary>
-    public class OwinRestService : IRestService, IDisposable
+    public sealed class OwinRestService : IRestService, IDisposable
     {
+        private static readonly string[] standardIpAddresses = { "127.0.0.1", "localhost" };
+
         private readonly ILog logService;
         private readonly IConfigStore configStore;
         private readonly IAntFactory antFactory;
@@ -67,20 +68,22 @@ namespace Zapp.Rest
         /// </summary>
         public void Listen()
         {
-            var opts = new StartOptions();
-            opts.ServerFactory = typeof(OwinHttpListener).Namespace;
+            var opts = new StartOptions()
+            {
+                Port = configStore.Value.Rest.Port,
+                ServerFactory = typeof(OwinHttpListener).Namespace
+            };
 
-            var port = configStore.Value.Rest.Port;
             var ipAddresses = GetIpAddresses();
 
             foreach (string ipAddress in ipAddresses)
             {
-                opts.Urls.Add($"http://{ipAddress}:{port}");
+                opts.Urls.Add($"http://{ipAddress}:{opts.Port}");
             }
 
             owinInstance = WebApp.Start(opts, Startup);
 
-            logService.Info($"listening on port: {opts.Port}");
+            logService.Info($"Server API listening on port: '{opts.Port}'.");
         }
 
         private void Startup(IAppBuilder app)
@@ -108,7 +111,7 @@ namespace Zapp.Rest
             config.EnsureInitialized();
         }
 
-        private IReadOnlyCollection<string> GetIpAddresses()
+        private IEnumerable<string> GetIpAddresses()
         {
             var ant = antFactory.CreateNew(configStore.Value.Rest.IpAddressPattern);
 
@@ -118,20 +121,16 @@ namespace Zapp.Rest
                 .SelectMany(i => i.GetIPProperties().UnicastAddresses)
                 .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
                 .Select(a => a.Address.ToString())
-                .ToList();
+                .Concat(standardIpAddresses);
 
             if (!IsAdministratorRole())
             {
-                ipAddresses.Clear();
+                ipAddresses = standardIpAddresses;
             }
-
-            ipAddresses.Add("127.0.0.1");
-            ipAddresses.Add("localhost");
 
             return ipAddresses
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(i => ant.IsMatch(i))
-                .ToList();
+                .Where(_ => ant.IsMatch(_));
         }
 
         private bool IsAdministratorRole()

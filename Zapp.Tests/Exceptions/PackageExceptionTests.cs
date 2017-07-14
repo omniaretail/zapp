@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
-using NUnit.Framework;
+﻿using NUnit.Framework;
+using Zapp.Pack;
 
-namespace Zapp.Pack
+namespace Zapp.Exceptions
 {
     [TestFixture]
     public class PackageExceptionTests

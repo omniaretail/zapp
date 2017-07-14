@@ -28,7 +28,14 @@ namespace Zapp.Example
                 kernel.Bind<IFusionFilter>().To<FusionProcessRenameFilter>();
 
                 var server = kernel.Get<IZappServer>();
-                server.Start();
+
+                try
+                {
+                    server.StartAsync(CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                catch { }
 
                 ThreadPool.QueueUserWorkItem((state) => ListenConsoleInput());
 

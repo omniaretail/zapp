@@ -1,8 +1,5 @@
 ﻿using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
-using System.IO;
-using Zapp.Core.Clauses;
 
 namespace Zapp.Config
 {
@@ -27,7 +24,7 @@ namespace Zapp.Config
         /// Represents the pattern for extracting fusions.
         /// </summary>
         [JsonProperty("fusionDirPattern")]
-        public string FusionDirectoryPattern { get; set; } = "{fusionId}/";
+        public string FusionDirectoryPattern { get; set; } = "{fusionId}_{epoch}/";
 
         /// <summary>
         /// Represents a collection of configuration for fusions.
@@ -58,26 +55,5 @@ namespace Zapp.Config
         /// </summary>
         [JsonProperty("isGcVeryLargeObjectsAllowed")]
         public bool IsGcVeryLargeObjectsAllowed { get; set; } = false;
-
-        /// <summary>
-        /// Resolves the actual root directory.
-        /// </summary>
-        public string GetActualRootDirectory() => RootDirectory
-            .Replace("{zappDir}", AppDomain.CurrentDomain.BaseDirectory);
-
-        /// <summary>
-        /// Resolves the actual fusion directory.
-        /// </summary>
-        /// <param name="fusionId">Identity of the fusion.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="fusionId"/> is not set.</exception>
-        public string GetActualFusionDirectory(string fusionId)
-        {
-            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
-
-            return Path.Combine(
-                GetActualRootDirectory(),
-                FusionDirectoryPattern.Replace("{fusionId}", fusionId)
-            );
-        }
     }
 }

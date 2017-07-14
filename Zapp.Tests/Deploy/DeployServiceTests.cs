@@ -1,6 +1,10 @@
 ﻿using Moq;
+using Moq.Sequences;
 using NUnit.Framework;
-using System.Collections.Generic;
+using Ploeh.AutoFixture;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Zapp.Fuse;
 using Zapp.Pack;
 using Zapp.Schedule;
@@ -12,70 +16,42 @@ namespace Zapp.Deploy
     public class DeployServiceTests : TestBiolerplate<DeployService>
     {
         [Test]
-        public void Announce_WhenSyncAnnounceFailed_ReturnsInternalError()
+        public void AnnounceAsync_WhenPackageUnavailable_Throws()
         {
-            var version = new PackageVersion("lib1", "1.0.0");
+            var versions = fixture.CreateMany<PackageVersion>(5);
+            var validatorMock = fixture.Freeze<Mock<IPackageVersionValidator>>();
 
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.IsPackageVersionDeployed(version))
-                .Returns(true);
+            validatorMock.Setup(_ => _.ConfirmAvailability(versions)).Throws<AggregateException>();
 
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Announce(version))
-                .Returns(false);
+            var sut = fixture.Create<DeployService>();
 
-            var sut = GetSystemUnderTest();
-
-            var result = sut.Announce(version);
-
-            Assert.That(result, Is.EqualTo(AnnounceResult.InternalError));
+            Assert.That(() => sut.AnnounceAsync(versions, CancellationToken.None), Throws.InstanceOf<AggregateException>());
         }
 
         [Test]
-        public void Announce_WhenPackageIsNotDeployed_ReturnsNotFound()
+        public void AnnounceAsync_WhenPackageIsOk_CallsExpectedMethodsAndThrowsNothing()
         {
-            var version = new PackageVersion("lib1", "1.0.0");
+            var announcementMock = fixture.Freeze<Mock<IDeployAnnouncement>>();
+            var announcementFactoryMock = fixture.Freeze<Mock<IDeployAnnouncementFactory>>();
 
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Announce(version))
-                .Returns(true);
+            var versions = fixture.CreateMany<PackageVersion>(5);
+            var syncMock = fixture.Freeze<Mock<ISyncService>>();
+            var fusionMock = fixture.Freeze<Mock<IFusionService>>();
+            var scheduleMock = fixture.Freeze<Mock<IScheduleService>>();
+            var validatorMock = fixture.Freeze<Mock<IPackageVersionValidator>>();
 
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.IsPackageVersionDeployed(version))
-                .Returns(false);
+            using (Sequence.Create())
+            {
+                var token = CancellationToken.None;
 
-            var sut = GetSystemUnderTest();
+                validatorMock.Setup(_ => _.ConfirmAvailability(versions)).InSequence(Times.Once());
+                announcementFactoryMock.Setup(_ => _.CreateNew(new string[0], versions)).InSequence(Times.Once()).Returns(() => announcementMock.Object);
+                scheduleMock.Setup(_ => _.ScheduleAsync(announcementMock.Object, token)).InSequence(Times.Once()).Returns(Task.FromResult(true));
 
-            var result = sut.Announce(version);
+                var sut = fixture.Create<DeployService>();
 
-            Assert.That(result, Is.EqualTo(AnnounceResult.NotFound));
-        }
-
-        [Test]
-        public void Announce_WhenEverythingIsOk_ReturnsOk()
-        {
-            var version = new PackageVersion("lib1", "1.0.0");
-
-            kernel.GetMock<ISyncService>()
-                .Setup(m => m.Announce(version))
-                .Returns(true);
-
-            kernel.GetMock<IPackService>()
-                .Setup(m => m.IsPackageVersionDeployed(version))
-                .Returns(true);
-
-            kernel.GetMock<IFusionService>()
-                .Setup(m => m.GetAffectedFusions(version.PackageId))
-                .Returns(new string[0]);
-
-            var sut = GetSystemUnderTest();
-
-            var result = sut.Announce(version);
-
-            Assert.That(result, Is.EqualTo(AnnounceResult.Ok));
-
-            kernel.GetMock<IScheduleService>()
-                .Verify(m => m.Schedule(It.IsAny<IReadOnlyCollection<string>>(), true), Times.Exactly(1));
+                Assert.That(() => sut.AnnounceAsync(versions, token), Throws.Nothing);
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Zapp.Process.Controller
     /// <summary>
     /// Represents a implementation of <see cref="IProcessController"/> with simple logics.
     /// </summary>
-    public class ProcessController : IProcessController, IDisposable
+    public sealed class ProcessController : IProcessController, IDisposable
     {
         private ManualResetEvent resetEvent;
 

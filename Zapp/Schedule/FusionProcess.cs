@@ -1,4 +1,5 @@
-﻿using log4net;
+﻿using EnsureThat;
+using log4net;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -6,10 +7,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Zapp.Catalogue;
 using Zapp.Config;
 using Zapp.Core;
-using Zapp.Core.Clauses;
-using Zapp.Core.Http;
+using Zapp.Core.Extensions;
+using Zapp.Exceptions;
 using Zapp.Fuse;
 using WinProcess = System.Diagnostics.Process;
 
@@ -18,7 +22,7 @@ namespace Zapp.Schedule
     /// <summary>
     /// Represents an implementation of <see cref="IFusionProcess"/> for windows processes.
     /// </summary>
-    public class FusionProcess : IFusionProcess, IDisposable
+    public sealed class FusionProcess : IFusionProcess, IDisposable
     {
         private const int maxNrOfRespawns = 10;
         private static readonly TimeSpan defaultProcessTimeout = TimeSpan.FromSeconds(20);
@@ -26,21 +30,16 @@ namespace Zapp.Schedule
         private const string startupAction = "api/lifetime/startup";
         private const string teardownAction = "api/lifetime/teardown";
 
-        private readonly string fusionId;
-
         private readonly ILog logService;
         private readonly IConfigStore configStore;
+        private readonly IFusionCatalogue fusionCatalogue;
+
+        private readonly IHttpFailurePolicy httpFailurePolicy;
 
         private WinProcess process;
         private IDictionary<string, string> metaInfo;
 
-        private int? processPort;
-
-        private PerformanceCounter cpuCounter;
-        private PerformanceCounter memoryCounter;
-
-        private DateTime? startedAt;
-
+        private int? restApiPort;
         private int nrOfRespawns = 0;
 
         private bool isAutoRestartEnabled = true;
@@ -49,13 +48,19 @@ namespace Zapp.Schedule
         /// Represents the identity of the fusion.
         /// </summary>
         /// <inheritdoc />
-        public string FusionId => fusionId;
+        public string FusionId { get; }
+
+        /// <summary>
+        /// Represents the state of the fusion.
+        /// </summary>
+        /// <inheritdoc />
+        public FusionProcessState State { get; private set; }
 
         /// <summary>
         /// Represents the timestamp when the process started.
         /// </summary>
         /// <inheritdoc />
-        public DateTime? StartedAt => startedAt;
+        public DateTime? StartedAt { get; private set; }
 
         /// <summary>
         /// Represents a custom session implemention.
@@ -67,120 +72,118 @@ namespace Zapp.Schedule
         /// Peformance counter for cpu.
         /// </summary>
         /// <inheritdoc />
-        public PerformanceCounter CpuCounter => cpuCounter;
+        public PerformanceCounter CpuCounter { get; private set; }
 
         /// <summary>
         /// Peformance counter for memory.
         /// </summary>
         /// <inheritdoc />
-        public PerformanceCounter MemoryCounter => memoryCounter;
+        public PerformanceCounter MemoryCounter { get; private set; }
 
         /// <summary>
         /// Initializes a new <see cref="FusionProcess"/>.
         /// </summary>
+        /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="logService">Service used for logging.</param>
         /// <param name="configStore">Store used for loading configuration.</param>
-        /// <param name="fusionId">Identity of the fusion.</param>
+        /// <param name="fusionCatalogue">Catalogue used to resolve locations of fusions.</param>
+        /// <param name="httpFailurePolicy">Failure policy used for http request(s).</param>
         public FusionProcess(
             string fusionId,
             ILog logService,
-            IConfigStore configStore)
+            IConfigStore configStore,
+            IFusionCatalogue fusionCatalogue,
+            IHttpFailurePolicy httpFailurePolicy)
         {
-            Guard.ParamNotNullOrEmpty(fusionId, nameof(fusionId));
+            EnsureArg.IsNotNullOrEmpty(fusionId, nameof(fusionId));
 
-            this.fusionId = fusionId;
+            FusionId = fusionId;
+
             this.logService = logService;
             this.configStore = configStore;
+            this.fusionCatalogue = fusionCatalogue;
+
+            this.httpFailurePolicy = httpFailurePolicy;
 
             process = new WinProcess();
-            cpuCounter = new PerformanceCounter("Process", "% Processor Time");
-            memoryCounter = new PerformanceCounter("Process", "Working Set - Private");
+
+            CpuCounter = new PerformanceCounter("Process", "% Processor Time");
+            MemoryCounter = new PerformanceCounter("Process", "Working Set - Private");
+
+            ChangeState(FusionProcessState.None);
         }
 
         /// <summary>
         /// Tries to spawn an instance of the process.
         /// </summary>
         /// <inheritdoc />
-        public bool TrySpawn()
+        public void Spawn()
         {
-            if (string.IsNullOrEmpty(process?.StartInfo?.FileName))
+            if (State == FusionProcessState.None)
             {
-                var fusionDir = configStore.Value?.Fuse?
-                    .GetActualFusionDirectory(fusionId);
-
-                metaInfo = LoadMetaInfo(fusionDir);
-
-                var executableName = Path.Combine(fusionDir, metaInfo[FusionMetaEntry.ExecutableInfoKey]);
-
-                process.StartInfo.Verb = "runas";
-                process.StartInfo.FileName = executableName;
-                process.StartInfo.RedirectStandardOutput = false;
-                process.StartInfo.RedirectStandardError = false;
-
-                var parentId = WinProcess.GetCurrentProcess().Id;
-                var parentPort = configStore.Value?.Rest?.Port;
-
-                process.StartInfo.EnvironmentVariables.Add(ZappVariables.FusionIdEnvKey, fusionId);
-                process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentProcessIdEnvKey, Convert.ToString(parentId));
-                process.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentPortEnvKey, Convert.ToString(parentPort));
-
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.CreateNoWindow = true;
-
-                process.EnableRaisingEvents = true;
-                process.Exited += (s, e) => OnExited();
+                SetupProcess(process);
             }
 
-            bool isSpawned = process?.Start() == true;
-
-            LogEvent("spawn", isSuccess: isSpawned);
-
-            if (isSpawned)
+            if (process?.Start() != true)
             {
-                cpuCounter.InstanceName = process.ProcessName;
-                memoryCounter.InstanceName = process.ProcessName;
+                throw new ScheduleException(ScheduleException.SpawnFailure, FusionId);
             }
 
-            return isSpawned;
+            CpuCounter.InstanceName = process.ProcessName;
+            MemoryCounter.InstanceName = process.ProcessName;
+
+            ChangeState(FusionProcessState.Spawned);
         }
 
         /// <summary>
-        /// Tries to request the process to start.
+        /// Announces the port of the process.
         /// </summary>
-        /// <param name="port">Port where the process is bound onto.</param>
+        /// <param name="port">Port that was received from the process.</param>
         /// <inheritdoc />
-        public bool TryRequestStart(int port)
+        public void Announce(int port)
         {
-            startedAt = null;
+            restApiPort = port;
 
-            processPort = port;
+            logService.Info($"Fusion: '{FusionId}' it's rest port ({port}) has been received successfully.");
 
-            using (var client = new HttpClient().AsLocalhost(processPort))
+            ChangeState(FusionProcessState.Announced);
+        }
+
+        /// <summary>
+        /// Runs the startup event on the process.
+        /// </summary>
+        /// <param name="token">Token used to cancel the http request.</param>
+        /// <inheritdoc />
+        public async Task StartupAsync(CancellationToken token)
+        {
+            using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
-                var isStartExecuted = client.ExpectOk(startupAction);
+                await client.GetWithFailurePolicyAsync(startupAction, httpFailurePolicy, token);
 
-                LogEvent("startup", message: $"Port: {processPort}", isSuccess: isStartExecuted);
-
-                return isStartExecuted;
+                logService.Info($"Fusion: '{FusionId}' it's statup event has been called with success.");
             }
         }
 
         /// <summary>
-        /// Tries to request the process to stop.
+        /// Runs the terminate event on the process.
         /// </summary>
+        /// <param name="token">Token used to cancel the http request.</param>
         /// <inheritdoc />
-        public bool TryRequestStop()
+        public async Task TerminateAsync(CancellationToken token)
         {
             isAutoRestartEnabled = false;
 
-            // todo: de-duplicate this code
-            using (var client = new HttpClient().AsLocalhost(processPort))
+            if (State != FusionProcessState.Started)
             {
-                var isTeardownExecuted = client.ExpectOk(teardownAction);
+                logService.Warn($"Fusion: '{FusionId}' was not requested to terminate, because it's state was not passed '{nameof(FusionProcessState.Started)}'.");
+                return;
+            }
 
-                LogEvent("teardown", isSuccess: isTeardownExecuted);
+            using (var client = new HttpClient().AsLocalhost(restApiPort))
+            {
+                await client.GetWithFailurePolicyAsync(teardownAction, httpFailurePolicy, token);
 
-                return isTeardownExecuted;
+                logService.Info($"Fusion: '{FusionId}' it's terminate event has been called with success.");
             }
         }
 
@@ -188,29 +191,58 @@ namespace Zapp.Schedule
         /// Called when the interceptors are informed.
         /// </summary>
         /// <inheritdoc />
-        public void OnInterceptorsInformed() => startedAt = DateTime.UtcNow;
+        public void OnInterceptorsInformed()
+        {
+            ChangeState(FusionProcessState.Started);
+        }
 
         private void OnExited()
         {
-            LogEvent("exited", isSuccess: !isAutoRestartEnabled);
+            ChangeState(FusionProcessState.Exited);
 
-            if (isAutoRestartEnabled)
+            var spawnThresholdReached = nrOfRespawns >= maxNrOfRespawns;
+
+            if (!isAutoRestartEnabled || spawnThresholdReached)
             {
-                bool isRespawned = TrySpawn();
-
-                int pos = ++nrOfRespawns;
-
-                if (pos >= maxNrOfRespawns)
+                if (spawnThresholdReached)
                 {
-                    isAutoRestartEnabled = false;
+                    logService.Fatal($"Fusion: '{FusionId}' it's spawn threshold ({maxNrOfRespawns}) has been reached.");
+                }
 
-                    LogEvent("spawn-restart", message: "reached respawn threshold", isSuccess: isRespawned, isCritical: true);
-                }
-                else
-                {
-                    LogEvent("spawn-restart", isSuccess: isRespawned);
-                }
+                ChangeState(FusionProcessState.Dead);
+                return;
             }
+
+            nrOfRespawns++;
+            Spawn();
+        }
+
+        private void SetupProcess(WinProcess setupProcess)
+        {
+            var processRootDirectory = fusionCatalogue
+                .GetActiveLocation(FusionId);
+
+            metaInfo = LoadMetaInfo(processRootDirectory);
+
+            var executableName = Path.Combine(processRootDirectory, metaInfo[FusionMetaEntry.ExecutableInfoKey]);
+
+            setupProcess.StartInfo.Verb = "runas";
+            setupProcess.StartInfo.FileName = executableName;
+            setupProcess.StartInfo.RedirectStandardOutput = false;
+            setupProcess.StartInfo.RedirectStandardError = false;
+
+            var parentId = WinProcess.GetCurrentProcess().Id;
+            var parentPort = configStore.Value?.Rest?.Port;
+
+            setupProcess.StartInfo.EnvironmentVariables.Add(ZappVariables.FusionIdEnvKey, FusionId);
+            setupProcess.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentProcessIdEnvKey, Convert.ToString(parentId));
+            setupProcess.StartInfo.EnvironmentVariables.Add(ZappVariables.ParentPortEnvKey, Convert.ToString(parentPort));
+
+            setupProcess.StartInfo.UseShellExecute = false;
+            setupProcess.StartInfo.CreateNoWindow = true;
+
+            setupProcess.EnableRaisingEvents = true;
+            setupProcess.Exited += (s, e) => OnExited();
         }
 
         private IDictionary<string, string> LoadMetaInfo(string fusionDir)
@@ -220,32 +252,20 @@ namespace Zapp.Schedule
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(metaContent);
         }
 
-        private void LogEvent(string eventName, string message = null, bool? isSuccess = false, bool? isCritical = false)
+        private void ChangeState(FusionProcessState state)
         {
-            var text = $"Process: {fusionId} Event: {eventName} Message: {message ?? "not provided"}";
+            State = state;
 
-            if (isSuccess.HasValue)
+            if (state == FusionProcessState.Started)
             {
-                if (isSuccess.Value == true)
-                {
-                    logService.Info(text);
-                }
-                else
-                {
-                    if (isCritical.Value == true)
-                    {
-                        logService.Fatal(text);
-                    }
-                    else
-                    {
-                        logService.Error(text);
-                    }
-                }
+                StartedAt = DateTime.Now;
             }
             else
             {
-                logService.Info(text);
+                StartedAt = null;
             }
+
+            logService.Info($"Fusion: '{FusionId}' it's state changed to: '{State.ToString()}'.");
         }
 
         /// <summary>
@@ -253,7 +273,6 @@ namespace Zapp.Schedule
         /// </summary>
         public void Dispose()
         {
-            startedAt = null;
             isAutoRestartEnabled = false;
 
             if (process?.HasExited == false)
@@ -271,11 +290,11 @@ namespace Zapp.Schedule
                 catch (Exception ex) when (ex is Win32Exception || ex is SystemException) { }
             }
 
-            cpuCounter?.Dispose();
-            cpuCounter = null;
+            CpuCounter?.Dispose();
+            CpuCounter = null;
 
-            memoryCounter?.Dispose();
-            memoryCounter = null;
+            MemoryCounter?.Dispose();
+            MemoryCounter = null;
 
             process?.Dispose();
             process = null;

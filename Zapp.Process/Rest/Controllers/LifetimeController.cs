@@ -30,6 +30,7 @@ namespace Zapp.Process.Rest.Controllers
         public StatusCodeResult Startup()
         {
             libraryService.RunStartup();
+
             return StatusCode(HttpStatusCode.OK);
         }
 
@@ -41,6 +42,7 @@ namespace Zapp.Process.Rest.Controllers
         public StatusCodeResult Teardown()
         {
             libraryService.RunTeardown();
+
             return StatusCode(HttpStatusCode.OK);
         }
     }

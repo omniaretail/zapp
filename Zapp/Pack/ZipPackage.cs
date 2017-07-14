@@ -1,10 +1,11 @@
-﻿using System;
+﻿using EnsureThat;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using Zapp.Core.Clauses;
+using Zapp.Exceptions;
 
 namespace Zapp.Pack
 {
@@ -12,7 +13,7 @@ namespace Zapp.Pack
     /// Represents an implementation of <see cref="IPackage"/> for compressed packages.
     /// </summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public class ZipPackage : IPackage, IDisposable
+    public sealed class ZipPackage : IPackage, IDisposable
     {
         private ZipArchive archive;
 
@@ -37,19 +38,18 @@ namespace Zapp.Pack
             Stream contentStream,
             IPackageEntryFactory packageEntryFactory)
         {
-            Guard.ParamNotNull(version, nameof(version));
-            Guard.ParamNotNull(contentStream, nameof(contentStream));
+            EnsureArg.IsNotNull(version, nameof(version));
+            EnsureArg.IsNotNull(contentStream, nameof(contentStream));
 
             Version = version;
 
             try
             {
-
                 archive = new ZipArchive(contentStream, ZipArchiveMode.Read);
             }
             catch (Exception ex)
             {
-                throw new PackageException("Package not compatible.", version, ex);
+                throw new PackageException(PackageException.LoadingFailure, version, ex);
             }
 
             this.packageEntryFactory = packageEntryFactory;
@@ -59,12 +59,11 @@ namespace Zapp.Pack
         /// Get the entries of the package.
         /// </summary>
         /// <inheritdoc />
-        public IReadOnlyCollection<IPackageEntry> GetEntries()
+        public IEnumerable<IPackageEntry> GetEntries()
         {
             return archive.Entries
-                .Select(e => packageEntryFactory
-                    .CreateNew(e.FullName, new LazyStream(e.Open)))
-                .ToList();
+                .Select(_ => packageEntryFactory
+                    .CreateNew(_.FullName, new LazyStream(_.Open)));
         }
 
         private string DebuggerDisplay => $"Package: {Version.PackageId} - {Version.DeployVersion}";

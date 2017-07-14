@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Zapp.Deploy;
 
 namespace Zapp.Schedule
 {
@@ -10,26 +13,26 @@ namespace Zapp.Schedule
         /// <summary>
         /// Represents the current running processes.
         /// </summary>
-        IReadOnlyCollection<IFusionProcess> Processes { get; }
-
-        /// <summary>
-        /// Schedules a collection of fusions
-        /// </summary>
-        /// <param name="fusionIds">Identities of the fusions.</param>
-        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
-        void Schedule(IReadOnlyCollection<string> fusionIds, bool isExtractionRequired = true);
+        IEnumerable<IFusionProcess> Processes { get; }
 
         /// <summary>
         /// Schedules all the configured fusions.
         /// </summary>
-        /// <param name="isExtractionRequired">Indicates if extraction is required.</param>
-        void ScheduleAll(bool isExtractionRequired = true);
+        /// <param name="token">The token of cancellation.</param>
+        Task ScheduleAllAsync(CancellationToken token);
+
+        /// <summary>
+        /// Schedules an <see cref="IDeployAnnouncement"/>.
+        /// </summary>
+        /// <param name="announcement">The announcement that needs to be scheduled.</param>
+        /// <param name="token">The token of cancellation.</param>
+        Task ScheduleAsync(IDeployAnnouncement announcement, CancellationToken token);
 
         /// <summary>
         /// Announces a running app on which rest port it's bound.
         /// </summary>
         /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="port">Port of the fusions' rest service.</param>
-        bool TryAnnounce(string fusionId, int port);
+        void Announce(string fusionId, int port);
     }
 }

@@ -1,9 +1,10 @@
-﻿using System;
-using System.Net;
+﻿using EnsureThat;
+using System;
 using System.Net.Http;
-using Zapp.Core.Clauses;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Zapp.Core.Http
+namespace Zapp.Core.Extensions
 {
     /// <summary>
     /// Represents a collection of extensions for <see cref="HttpClient"/>.
@@ -11,25 +12,28 @@ namespace Zapp.Core.Http
     public static class HttpClientExtensions
     {
         /// <summary>
-        /// Gets the statuscode of a requested get-url.
+        /// Runs a Http-Get with a <see cref="IHttpFailurePolicy"/> which determines if the request was success or not.
         /// </summary>
-        /// <param name="client">Client used to request on.</param>
-        /// <param name="requestUri">Uri of the request.</param>
-        public static bool ExpectOk(this HttpClient client, string requestUri)
+        /// <param name="client">The client which is used to run the request with.</param>
+        /// <param name="requestUri">The url of the request.</param>
+        /// <param name="failurePolicy">The policy used to determine if the request was success or not.</param>
+        /// <param name="token">The token used to cancel the request.</param>
+        public static async Task GetWithFailurePolicyAsync(this HttpClient client, string requestUri, IHttpFailurePolicy failurePolicy, CancellationToken token)
         {
-            Guard.ParamNotNull(client, nameof(client));
-            Guard.ParamNotNullOrEmpty(requestUri, nameof(requestUri));
+            EnsureArg.IsNotNull(client, nameof(client));
+            EnsureArg.IsNotNullOrEmpty(requestUri, nameof(requestUri));
+            EnsureArg.IsNotNull(failurePolicy, nameof(failurePolicy));
 
             try
             {
-                using (var response = client.GetAsync(requestUri).Result)
+                using (var response = await client.GetAsync(requestUri, token))
                 {
-                    return response.StatusCode == HttpStatusCode.OK;
+                    failurePolicy.OnResponse(response);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                failurePolicy.OnError(ex);
             }
         }
 

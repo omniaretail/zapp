@@ -30,11 +30,9 @@ namespace Zapp.Rest.Controllers
         [HttpGet, HttpPost, Route("api/radar/announce/{fusionId}/{port}")]
         public StatusCodeResult Announce(string fusionId, int port)
         {
-            return StatusCode(
-                scheduleService.TryAnnounce(fusionId, port)
-                    ? HttpStatusCode.OK
-                    : HttpStatusCode.InternalServerError
-            );
+            scheduleService.Announce(fusionId, port);
+
+            return StatusCode(HttpStatusCode.OK);
         }
     }
 }
