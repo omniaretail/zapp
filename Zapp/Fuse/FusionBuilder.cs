@@ -86,7 +86,8 @@ namespace Zapp.Fuse
             try
             {
                 packages = packageVersions
-                    .Select(_ => packService.LoadPackage(_));
+                    .Select(_ => packService.LoadPackage(_))
+                    .Stale();
 
                 var finalEntries = GetFinalEntries(fusionConfig, packages);
 
