@@ -1,5 +1,6 @@
 ﻿using Ninject;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -22,6 +23,8 @@ namespace Zapp.Process.Libraries
         private readonly IProcessController processController;
         private readonly INuGetPackageResolver nuGetPackageResolver;
 
+        private readonly IReadOnlyCollection<ILibraryPostProcessor> postProcessors;
+
         /// <summary>
         /// Initializes a new <see cref="LibraryService"/>.
         /// </summary>
@@ -29,16 +32,20 @@ namespace Zapp.Process.Libraries
         /// <param name="metaService">Service used for receiving meta info.</param>
         /// <param name="processController">Controller for process' lifetime.</param>
         /// <param name="nuGetPackageResolver">Resolver used to resolve NuGet packages.</param>
+        /// <param name="postProcessors">Collection of library post-processors.</param>
         public LibraryService(
             IKernel kernel,
             IMetaService metaService,
             IProcessController processController,
-            INuGetPackageResolver nuGetPackageResolver)
+            INuGetPackageResolver nuGetPackageResolver,
+            IEnumerable<ILibraryPostProcessor> postProcessors)
         {
             this.kernel = kernel;
             this.metaService = metaService;
             this.processController = processController;
             this.nuGetPackageResolver = nuGetPackageResolver;
+
+            this.postProcessors = postProcessors.ToArray();
         }
 
         /// <summary>
@@ -62,7 +69,12 @@ namespace Zapp.Process.Libraries
 
             foreach (var library in missingLibraries)
             {
-                Assembly.LoadFile(library.FullName);
+                var assembly = Assembly.LoadFile(library.FullName);
+
+                foreach(var postProcessor in postProcessors)
+                {
+                    postProcessor.Process(assembly);
+                }
             }
         }
 

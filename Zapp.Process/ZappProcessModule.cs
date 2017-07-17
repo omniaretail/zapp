@@ -1,7 +1,11 @@
-﻿using Ninject.Modules;
+﻿using AntPathMatching;
+using Ninject.Extensions.Factory;
+using Ninject.Modules;
 using Zapp.Core;
+using Zapp.Hospital;
 using Zapp.Process.Client;
 using Zapp.Process.Controller;
+using Zapp.Process.Hospital;
 using Zapp.Process.Libraries;
 using Zapp.Process.Meta;
 using Zapp.Process.Rest;
@@ -19,7 +23,9 @@ namespace Zapp.Process
         /// <inheritdoc />
         public override void Load()
         {
-            Kernel.Load(new[] { new ZappCoreModule() });
+            Kernel.Load(new[] {
+                new ZappCoreModule()
+            });
 
             Bind<IZappProcess>().To<ZappProcess>().InSingletonScope();
 
@@ -29,8 +35,15 @@ namespace Zapp.Process
             Bind<IZappClient>().To<RestZappClient>().InSingletonScope();
 
             Bind<ILibraryService>().To<LibraryService>().InSingletonScope();
+            Bind<ILibraryPostProcessor>().To<PatientLibraryPostProcessor>().InSingletonScope();
+
             Bind<IRestService>().To<OwinRestService>().InSingletonScope();
             Bind<IMetaService>().To<StandardMetaService>().InSingletonScope();
+
+            Bind<IAnt>().To<Ant>().InTransientScope();
+            Bind<IAntFactory>().ToFactory();
+
+            Bind<IPatientService>().To<PatientService>().InSingletonScope();
         }
     }
 }

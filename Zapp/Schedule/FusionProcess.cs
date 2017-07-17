@@ -15,6 +15,7 @@ using Zapp.Core;
 using Zapp.Core.Extensions;
 using Zapp.Exceptions;
 using Zapp.Fuse;
+using Zapp.Hospital;
 using WinProcess = System.Diagnostics.Process;
 
 namespace Zapp.Schedule
@@ -29,6 +30,7 @@ namespace Zapp.Schedule
 
         private const string startupAction = "api/lifetime/startup";
         private const string teardownAction = "api/lifetime/teardown";
+        private const string nurseStatusAction = "api/nurse/status";
 
         private readonly ILog logService;
         private readonly IConfigStore configStore;
@@ -184,6 +186,19 @@ namespace Zapp.Schedule
                 await client.GetWithFailurePolicyAsync(teardownAction, httpFailurePolicy, token);
 
                 logService.Info($"Fusion: '{FusionId}' it's terminate event has been called with success.");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<IEnumerable<PatientStatus>> NurseStatusAsync(string patientPattern, CancellationToken token)
+        {
+            EnsureArg.IsNotNullOrEmpty(patientPattern, nameof(patientPattern));
+
+            using (var client = new HttpClient().AsLocalhost(restApiPort))
+            {
+                var actualAction = $"{nurseStatusAction}?{nameof(patientPattern)}={patientPattern}";
+
+                return await client.GetJsonAsync<IEnumerable<PatientStatus>>(actualAction, token);
             }
         }
 

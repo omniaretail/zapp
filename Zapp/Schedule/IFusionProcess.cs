@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Zapp.Hospital;
 
 namespace Zapp.Schedule
 {
@@ -60,7 +62,15 @@ namespace Zapp.Schedule
         /// <summary>
         /// Runs the terminate event on the process.
         /// </summary>
+        /// <param name="token">Token used to cancel the http request.</param>
         Task TerminateAsync(CancellationToken token);
+
+        /// <summary>
+        /// Requests the NurseController for the patient statusses.
+        /// </summary>
+        /// <param name="patientPattern">Pattern used to query patients.</param>
+        /// <param name="token">Token used to cancel the http request.</param>
+        Task<IEnumerable<PatientStatus>> NurseStatusAsync(string patientPattern, CancellationToken token);
 
         /// <summary>
         /// Called when the interceptors are informed.

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using Zapp.Hospital;
 
 namespace Zapp.Exceptions
 {
@@ -33,6 +34,16 @@ namespace Zapp.Exceptions
         /// Represents a message for when a full announcement is required.
         /// </summary>
         public static readonly string FullAnnouncementRequired = "Zapp requires a full announcement to function before any delta.";
+
+        /// <summary>
+        /// Represents a message for when the process failed to respond with patient statusses.
+        /// </summary>
+        public static readonly string NurseStatusFailure = "Fusion process failed to respond with patient statusses.";
+
+        /// <summary>
+        /// Represents a message for when the process responded with unhealthy patient(s).
+        /// </summary>
+        public static readonly string NurseUnhealthyPatientsPrefix = $"Fusion processes responded patients with status '{nameof(PatientStatusType.Red)}': ";
 
         /// <summary>
         /// Represents the id of the fusion where the error occurred on.

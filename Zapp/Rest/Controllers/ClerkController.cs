@@ -8,6 +8,7 @@ using System.Web.Http;
 using System.Web.Http.Results;
 using Zapp.Deploy;
 using Zapp.Pack;
+using Zapp.Schedule;
 using Zapp.Sync;
 
 namespace Zapp.Rest.Controllers
@@ -21,6 +22,7 @@ namespace Zapp.Rest.Controllers
 
         private readonly ISyncService syncService;
         private readonly IDeployService deployService;
+        private readonly IScheduleService scheduleService;
 
         /// <summary>
         /// Initializes a new <see cref="ClerkController"/>.
@@ -28,15 +30,18 @@ namespace Zapp.Rest.Controllers
         /// <param name="logService">Service used for logging.</param>
         /// <param name="syncService">Service used to synchronize the packages.</param>
         /// <param name="deployService">Service used for announcing deployments.</param>
+        /// <param name="scheduleService">Service used for controlling fusions.</param>
         public ClerkController(
             ILog logService,
             ISyncService syncService,
-            IDeployService deployService)
+            IDeployService deployService,
+            IScheduleService scheduleService)
         {
             this.logService = logService;
 
             this.syncService = syncService;
             this.deployService = deployService;
+            this.scheduleService = scheduleService;
         }
 
         /// <summary>
@@ -113,6 +118,26 @@ namespace Zapp.Rest.Controllers
             catch (Exception ex)
             {
                 logService.Fatal("Publication failed.", ex);
+                throw;
+            }
+
+            return StatusCode(HttpStatusCode.OK);
+        }
+
+        /// <summary>
+        /// Rolls back all the fusions to the last synchronized version.
+        /// </summary>
+        /// <param name="token">Token that is used to keep track of cancelled requests.</param>        
+        [HttpGet, Route("api/clerk/rollback/")]
+        public async Task<StatusCodeResult> Rollback(CancellationToken token)
+        {
+            try
+            {
+                await scheduleService.ScheduleAllAsync(token);
+            }
+            catch (Exception ex)
+            {
+                logService.Fatal("Rollback failed.", ex);
                 throw;
             }
 
