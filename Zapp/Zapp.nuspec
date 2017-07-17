@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>$id$</id>
-    <version>$version$</version>
+    <id>Zapp</id>
+    <version>2.1.0</version>
     <title>Zapp</title>
     <description>Zapp is a Windows process orchestrator for packed apps.</description>
     <authors>Omnia Retail</authors>
