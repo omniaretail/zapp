@@ -261,7 +261,10 @@ namespace Zapp.Schedule
                 throw new ScheduleException(ScheduleException.NurseStatusFailure, process.FusionId, ex);
             }
 
-            if (!statusses.Any())
+            var allowNoPatients = configStore.Value.Fuse.AllowFusionsWithoutPatients;
+
+            if (!allowNoPatients &&
+                !statusses.Any())
             {
                 var builder = new StringBuilder();
                 builder.AppendLine(ScheduleException.NurseUnhealthyPatientsPrefix);

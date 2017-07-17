@@ -61,5 +61,11 @@ namespace Zapp.Config
         /// </summary>
         [JsonProperty("ignoreInitialScheduleFailure")]
         public bool IgnoreInitialScheduleFailure = true;
+
+        /// <summary>
+        /// Represents a setting that indicates if zapp is allowed to proceed for fusions without patients.
+        /// </summary>
+        [JsonProperty("allowFusionsWithoutPatients")]
+        public bool AllowFusionsWithoutPatients = false;
     }
 }
