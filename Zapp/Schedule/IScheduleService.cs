@@ -11,6 +11,11 @@ namespace Zapp.Schedule
     public interface IScheduleService
     {
         /// <summary>
+        /// Represents if the service is deploying currently.
+        /// </summary>
+        bool IsDeploying();
+
+        /// <summary>
         /// Represents the current running processes.
         /// </summary>
         IEnumerable<IFusionProcess> Processes { get; }

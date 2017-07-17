@@ -11,8 +11,8 @@
         string Id { get; }
 
         /// <summary>
-        /// Represents if the patient is healthy.
+        /// Gets the status of the current patient.
         /// </summary>
-        bool IsHealthy();
+        PatientStatus GetStatus();
     }
 }

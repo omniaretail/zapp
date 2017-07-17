@@ -1,5 +1,7 @@
 ﻿using EnsureThat;
+using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +36,29 @@ namespace Zapp.Core.Extensions
             catch (Exception ex)
             {
                 failurePolicy.OnError(ex);
+            }
+        }
+
+        /// <summary>
+        /// Runs a Http-Get and deserializes the json response.
+        /// </summary>
+        /// <param name="client">The client which is used to run the request with.</param>
+        /// <param name="requestUri">The url of the request.</param>
+        /// <param name="token">The token used to cancel the request.</param>
+        public static async Task<T> GetJsonAsync<T>(this HttpClient client, string requestUri, CancellationToken token)
+        {
+            EnsureArg.IsNotNull(client, nameof(client));
+            EnsureArg.IsNotNullOrEmpty(requestUri, nameof(requestUri));
+
+            var response = await client.GetAsync(requestUri, token);
+
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var textReader = new StreamReader(stream))
+            using (var jsonReader = new JsonTextReader(textReader))
+            {
+                var serializer = new JsonSerializer();
+
+                return serializer.Deserialize<T>(jsonReader);
             }
         }
 

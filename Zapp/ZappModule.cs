@@ -10,6 +10,7 @@ using Zapp.Config;
 using Zapp.Core;
 using Zapp.Deploy;
 using Zapp.Fuse;
+using Zapp.Hospital;
 using Zapp.Pack;
 using Zapp.Perspectives;
 using Zapp.Rest;
@@ -89,6 +90,8 @@ namespace Zapp
 
             Bind<IDeployAnnouncement>().To<DeployAnnouncement>().InTransientScope();
             Bind<IDeployAnnouncementFactory>().ToFactory();
+
+            Bind<IHospitalService>().To<HospitalService>().InSingletonScope();
 
             LoadPerspectives();
             LoadValidators();

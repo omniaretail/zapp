@@ -94,9 +94,8 @@
       <HintPath>..\packages\Microsoft.Web.Xdt.2.1.1\lib\net40\Microsoft.Web.XmlTransform.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Ninject, Version=3.2.0.0, Culture=neutral, PublicKeyToken=c7192dc5380945e7, processorArchitecture=MSIL">
       <HintPath>..\packages\Ninject.3.2.2.0\lib\net45-full\Ninject.dll</HintPath>
@@ -191,6 +190,10 @@
       <HintPath>..\packages\WebActivatorEx.2.2.0\lib\net40\WebActivatorEx.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Zapp.Hospital, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Zapp.Hospital\bin\Debug\Zapp.Hospital.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Catalogue\FusionCatalogue.cs" />
@@ -236,6 +239,10 @@
     <Compile Include="Fuse\IFusionBuilder.cs" />
     <Compile Include="Fuse\ZipFusion.cs" />
     <Compile Include="Fuse\IFrameworkPackageEntry.cs" />
+    <Compile Include="Hospital\FusionStatus.cs" />
+    <Compile Include="Hospital\HospitalService.cs" />
+    <Compile Include="Hospital\HospitalStatus.cs" />
+    <Compile Include="Hospital\IHospitalService.cs" />
     <Compile Include="Pack\IPackage.cs" />
     <Compile Include="Pack\IPackageEntry.cs" />
     <Compile Include="Pack\IPackageEntryFactory.cs" />
@@ -252,6 +259,7 @@
     <Compile Include="Perspectives\IDirectoryInfo.cs" />
     <Compile Include="Perspectives\IDirectoryInfoFactory.cs" />
     <Compile Include="Perspectives\IFile.cs" />
+    <Compile Include="Rest\Controllers\HospitalController.cs" />
     <Compile Include="Rest\Controllers\RadarController.cs" />
     <Compile Include="Rest\OwinRestService.cs" />
     <Compile Include="Rest\IRestService.cs" />

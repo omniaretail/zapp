@@ -3,6 +3,7 @@ using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Zapp.Config;
@@ -10,6 +11,7 @@ using Zapp.Deploy;
 using Zapp.Exceptions;
 using Zapp.Extensions;
 using Zapp.Fuse;
+using Zapp.Hospital;
 using Zapp.Pack;
 
 namespace Zapp.Schedule
@@ -79,6 +81,12 @@ namespace Zapp.Schedule
             processes = new SortedDictionary<string, IFusionProcess>(
                 StringComparer.OrdinalIgnoreCase);
         }
+        
+        /// <summary>
+        /// Represents if the service is deploying currently.
+        /// </summary>
+        /// <inheritDoc />
+        public bool IsDeploying() => syncLock?.CurrentCount < nrOfSimultaneousOperations;
 
         /// <summary>
         /// Schedules all the configured fusions.
@@ -149,14 +157,9 @@ namespace Zapp.Schedule
 
                 logService.Info("Received all announcements from the new fusion(s).");
 
-                await StartupMultipleAsync(newProcesses, token); // calls all the startups
+                await StartupMultipleAsync(newProcesses, token); // calls all the startups + nurse statusses
 
-                logService.Info("Started all new fusion(s).");
-
-                await HealthCheckMultipleAsync(newProcesses, token); // asks for all the nurse statusses
-
-                // todo: check health after startup or afterwards, .. what's faster ?
-                logService.Info("Received all heath statusses for the new fusion(s).");
+                logService.Info("Started all new fusion(s) and checked their patient(s).");
 
                 ResumeAll(token);
 
@@ -220,6 +223,7 @@ namespace Zapp.Schedule
                 token.ThrowIfCancellationRequested();
 
                 await StartupAsync(process, token);
+                await FetchNurseStatusAsync(process, token);
             }
         }
 
@@ -237,6 +241,55 @@ namespace Zapp.Schedule
             }
 
             process.OnInterceptorsInformed();
+        }
+
+        private async Task FetchNurseStatusAsync(IFusionProcess process, CancellationToken token)
+        {
+            IEnumerable<PatientStatus> statusses;
+
+            try
+            {
+                statusses = (await process.NurseStatusAsync("*", token)).Stale();
+
+                foreach(var status in statusses)
+                {
+                    logService.Debug($"Patient: '{status.Id}' received for : '{process.FusionId}' with status '{status.Type}'.");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ScheduleException(ScheduleException.NurseStatusFailure, process.FusionId, ex);
+            }
+
+            if (!statusses.Any())
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine(ScheduleException.NurseUnhealthyPatientsPrefix);
+                builder.AppendLine();
+                builder.AppendLine("No patients created for this fusion.");
+
+                throw new ScheduleException(builder.ToString(), process.FusionId);
+            }
+
+            var unhealthyStatusses = statusses
+                .Where(_ => _.Type == PatientStatusType.Red)
+                .ToArray();
+
+            if (unhealthyStatusses.Any())
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine(ScheduleException.NurseUnhealthyPatientsPrefix);
+                
+                foreach(var status in unhealthyStatusses)
+                {
+                    builder.AppendLine();
+                    builder.AppendLine($"Id: {status.Id}");
+                    builder.AppendLine($"Status: {status.Type.ToString()}");
+                    builder.AppendLine($"Reason: {status.Reason}");
+                }
+
+                throw new ScheduleException(builder.ToString(), process.FusionId);
+            }
         }
 
         private IEnumerable<IFusionProcess> SpawnMultiple(IEnumerable<string> fusionIds, CancellationToken token)
@@ -301,21 +354,6 @@ namespace Zapp.Schedule
                 await Task.Delay(waitForAnnouncementInterval);
             }
             while (pendingProcesses.Any());
-        }
-
-        private async Task HealthCheckMultipleAsync(IEnumerable<IFusionProcess> processes, CancellationToken token)
-        {
-            foreach (var process in processes)
-            {
-                token.ThrowIfCancellationRequested();
-
-                await HealthCheckAsync(process, token);
-            }
-        }
-
-        private async Task HealthCheckAsync(IFusionProcess process, CancellationToken token)
-        {
-            await Task.Delay(0); // todo: create!
         }
 
         private async Task TerminateAllAsync(CancellationToken token)
