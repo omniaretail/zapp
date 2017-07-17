@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>$id$</id>
+    <id>Zapp.Hospital</id>
     <version>0.0.1</version>
-    <title>Zapp</title>
+    <title>Zapp.Hospital</title>
     <description>A plugin package for Zapp to construct health checks for a fusion.</description>
     <authors>Omnia Retail</authors>
     <owners>Omnia Retail</owners>
