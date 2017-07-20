@@ -181,8 +181,9 @@ namespace Zapp.Schedule
         /// </summary>
         /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="port">Port of the fusions' rest service.</param>
+        /// <param name="token">Token of cancellation.</param>
         /// <inheritdoc />
-        public void Announce(string fusionId, int port)
+        public async Task AnnounceAsync(string fusionId, int port, CancellationToken token)
         {
             EnsureArg.IsNotNullOrEmpty(fusionId, nameof(fusionId));
 
@@ -194,6 +195,19 @@ namespace Zapp.Schedule
             }
 
             process.Announce(port);
+
+            if (!IsDeploying())
+            {
+                try
+                {
+                    await StartupAsync(process, token);
+                }
+                catch
+                {
+                    process.OnRespawnStartupFailed();
+                    throw;
+                }
+            }
         }
 
         private bool TryGetActiveProcess(string fusionId, out IFusionProcess process)
@@ -223,13 +237,13 @@ namespace Zapp.Schedule
                 token.ThrowIfCancellationRequested();
 
                 await StartupAsync(process, token);
-                await FetchNurseStatusAsync(process, token);
             }
         }
 
         private async Task StartupAsync(IFusionProcess process, CancellationToken token)
         {
             await process.StartupAsync(token);
+            await FetchNurseStatusAsync(process, token);
 
             foreach (var interceptor in interceptors)
             {
@@ -340,7 +354,7 @@ namespace Zapp.Schedule
                 if (deadProcesses.Any())
                 {
                     var errors = deadProcesses
-                        .Select(_ => new ScheduleException(ScheduleException.Dead, _.FusionId));
+                        .Select(_ => new ScheduleException(GetDeathErrorMessage(_), _.FusionId));
 
                     throw new AggregateException(errors);
                 }
@@ -443,6 +457,14 @@ namespace Zapp.Schedule
         {
             return configStore.Value?.Fuse?.Fusions?
                 .SingleOrDefault(_ => string.Equals(_.Id, fusionId, StringComparison.OrdinalIgnoreCase))?.Order ?? int.MaxValue;
+        }
+
+        private string GetDeathErrorMessage(IFusionProcess process)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine(ScheduleException.Dead);
+            builder.AppendLine(process.GetErrorOutput());
+            return builder.ToString();
         }
 
         /// <summary>

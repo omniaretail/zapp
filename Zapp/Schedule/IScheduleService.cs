@@ -38,6 +38,7 @@ namespace Zapp.Schedule
         /// </summary>
         /// <param name="fusionId">Identity of the fusion.</param>
         /// <param name="port">Port of the fusions' rest service.</param>
-        void Announce(string fusionId, int port);
+        /// <param name="token">Token of cancellation.</param>
+        Task AnnounceAsync(string fusionId, int port, CancellationToken token);
     }
 }

@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Zapp.Catalogue;
@@ -25,7 +26,7 @@ namespace Zapp.Schedule
     /// </summary>
     public sealed class FusionProcess : IFusionProcess, IDisposable
     {
-        private const int maxNrOfRespawns = 10;
+        private const int spawnThreshold = 10;
         private static readonly TimeSpan defaultProcessTimeout = TimeSpan.FromSeconds(20);
 
         private const string startupAction = "api/lifetime/startup";
@@ -42,7 +43,8 @@ namespace Zapp.Schedule
         private IDictionary<string, string> metaInfo;
 
         private int? restApiPort;
-        private int nrOfRespawns = 0;
+        private int nrOfSpawns = 0;
+        private string errorOutput;
 
         private bool isAutoRestartEnabled = true;
 
@@ -135,6 +137,8 @@ namespace Zapp.Schedule
             MemoryCounter.InstanceName = process.ProcessName;
 
             ChangeState(FusionProcessState.Spawned);
+
+            nrOfSpawns++;
         }
 
         /// <summary>
@@ -149,6 +153,8 @@ namespace Zapp.Schedule
             logService.Info($"Fusion: '{FusionId}' it's rest port ({port}) has been received successfully.");
 
             ChangeState(FusionProcessState.Announced);
+
+            // if scheduler is not deploying start for your own!
         }
 
         /// <summary>
@@ -203,33 +209,77 @@ namespace Zapp.Schedule
         }
 
         /// <summary>
+        /// Gets the error output for a dead or exited process
+        /// </summary>
+        /// <inheritDoc />
+        public string GetErrorOutput()
+        {
+            try
+            {
+                var actual = process?.StandardError?.ReadToEnd();
+
+                if (!string.IsNullOrEmpty(actual))
+                {
+                    errorOutput = actual;
+                }
+
+                return string.IsNullOrEmpty(errorOutput)
+                    ? "No error output has been received."
+                    : errorOutput;
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
+        }
+
+        /// <summary>
         /// Called when the interceptors are informed.
         /// </summary>
         /// <inheritdoc />
         public void OnInterceptorsInformed()
         {
+            nrOfSpawns = 1;
+
             ChangeState(FusionProcessState.Started);
+        }
+
+        /// <summary>
+        /// Called when a respawn has been failed.
+        /// </summary>
+        /// <inheritdoc />
+        public void OnRespawnStartupFailed()
+        {
+            logService.Warn($"Fusion: '{FusionId}' it's startup failed, fast-forwarded respawn threshold to ({spawnThreshold}).");
+
+            nrOfSpawns = spawnThreshold;
+
+            OnExited();
         }
 
         private void OnExited()
         {
             ChangeState(FusionProcessState.Exited);
 
-            var spawnThresholdReached = nrOfRespawns >= maxNrOfRespawns;
+            var spawnThresholdReached = nrOfSpawns >= spawnThreshold;
 
             if (!isAutoRestartEnabled || spawnThresholdReached)
             {
+                ChangeState(FusionProcessState.Dead);
+
                 if (spawnThresholdReached)
                 {
-                    logService.Fatal($"Fusion: '{FusionId}' it's spawn threshold ({maxNrOfRespawns}) has been reached.");
+                    var builder = new StringBuilder();
+                    builder.AppendLine($"Fusion: '{FusionId}' it's spawn threshold ({spawnThreshold}) has been reached. Cause: ");
+                    builder.AppendLine(GetErrorOutput());
+
+                    logService.Fatal(builder.ToString());
                 }
-
-                ChangeState(FusionProcessState.Dead);
-                return;
             }
-
-            nrOfRespawns++;
-            Spawn();
+            else
+            {
+                Spawn();
+            }
         }
 
         private void SetupProcess(WinProcess setupProcess)
@@ -244,7 +294,7 @@ namespace Zapp.Schedule
             setupProcess.StartInfo.Verb = "runas";
             setupProcess.StartInfo.FileName = executableName;
             setupProcess.StartInfo.RedirectStandardOutput = false;
-            setupProcess.StartInfo.RedirectStandardError = false;
+            setupProcess.StartInfo.RedirectStandardError = true;
 
             var parentId = WinProcess.GetCurrentProcess().Id;
             var parentPort = configStore.Value?.Rest?.Port;
@@ -267,8 +317,13 @@ namespace Zapp.Schedule
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(metaContent);
         }
 
-        private void ChangeState(FusionProcessState state)
+        private bool ChangeState(FusionProcessState state)
         {
+            if (State == state)
+            {
+                return false;
+            }
+
             State = state;
 
             if (state == FusionProcessState.Started)
@@ -281,6 +336,7 @@ namespace Zapp.Schedule
             }
 
             logService.Info($"Fusion: '{FusionId}' it's state changed to: '{State.ToString()}'.");
+            return true;
         }
 
         /// <summary>

@@ -73,8 +73,19 @@ namespace Zapp.Schedule
         Task<IEnumerable<PatientStatus>> NurseStatusAsync(string patientPattern, CancellationToken token);
 
         /// <summary>
+        /// Gets the error output for a dead or exited process
+        /// </summary>
+        /// <inheritDoc />
+        string GetErrorOutput();
+
+        /// <summary>
         /// Called when the interceptors are informed.
         /// </summary>
         void OnInterceptorsInformed();
+
+        /// <summary>
+        /// Called when a respawn has been failed.
+        /// </summary>
+        void OnRespawnStartupFailed();
     }
 }

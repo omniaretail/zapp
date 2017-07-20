@@ -1,6 +1,5 @@
 ﻿using Ninject;
 using System;
-using System.IO;
 using Zapp.Process.Controller;
 
 namespace Zapp.Process
@@ -32,7 +31,7 @@ namespace Zapp.Process
             }
             catch (Exception ex)
             {
-                HandleException(ex);
+                Console.Error.WriteLine(ex.ToString());
             }
             finally
             {
@@ -42,13 +41,6 @@ namespace Zapp.Process
                 (processController as IDisposable)?.Dispose();
                 processController = null;
             }
-        }
-
-        private static void HandleException(Exception ex)
-        {
-            var file = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash_dump.log");
-
-            File.WriteAllText(file, ex.ToString());
         }
     }
 }
