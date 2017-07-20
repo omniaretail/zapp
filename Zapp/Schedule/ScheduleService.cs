@@ -243,7 +243,6 @@ namespace Zapp.Schedule
         private async Task StartupAsync(IFusionProcess process, CancellationToken token)
         {
             await process.StartupAsync(token);
-            await FetchNurseStatusAsync(process, token);
 
             foreach (var interceptor in interceptors)
             {
@@ -255,6 +254,8 @@ namespace Zapp.Schedule
             }
 
             process.OnInterceptorsInformed();
+
+            await FetchNurseStatusAsync(process, token);
         }
 
         private async Task FetchNurseStatusAsync(IFusionProcess process, CancellationToken token)
