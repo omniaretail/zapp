@@ -44,7 +44,6 @@ namespace Zapp.Schedule
 
         private int? restApiPort;
         private int nrOfSpawns = 0;
-        private string errorOutput;
 
         private bool isAutoRestartEnabled = true;
 
@@ -216,16 +215,20 @@ namespace Zapp.Schedule
         {
             try
             {
-                var actual = process?.StandardError?.ReadToEnd();
+                var processRootDirectory = fusionCatalogue
+                    .GetActiveLocation(FusionId);
 
-                if (!string.IsNullOrEmpty(actual))
+                var crashDumpFile = Path.Combine(
+                    processRootDirectory, 
+                    ZappVariables.CrashDumpFileName
+                );
+
+                if (!File.Exists(crashDumpFile))
                 {
-                    errorOutput = actual;
+                    return "No error output has been received.";
                 }
 
-                return string.IsNullOrEmpty(errorOutput)
-                    ? "No error output has been received."
-                    : errorOutput;
+                return File.ReadAllText(crashDumpFile);
             }
             catch (Exception ex)
             {
@@ -294,7 +297,7 @@ namespace Zapp.Schedule
             setupProcess.StartInfo.Verb = "runas";
             setupProcess.StartInfo.FileName = executableName;
             setupProcess.StartInfo.RedirectStandardOutput = false;
-            setupProcess.StartInfo.RedirectStandardError = true;
+            setupProcess.StartInfo.RedirectStandardError = false;
 
             var parentId = WinProcess.GetCurrentProcess().Id;
             var parentPort = configStore.Value?.Rest?.Port;

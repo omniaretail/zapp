@@ -45,5 +45,10 @@
         /// Represents the fusion info key of the teardown method name.
         /// </summary>
         public const string TeardownMethodNameFusionInfoKey = "teardown.method.name";
+
+        /// <summary>
+        /// Represents the filename for crash-dump's.
+        /// </summary>
+        public const string CrashDumpFileName = "crash-dump.log";
     }
 }
