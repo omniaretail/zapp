@@ -201,6 +201,7 @@ namespace Zapp.Schedule
 
             using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
+                client.Timeout = configStore.Value.Rest.PatientRequestTimeout;
                 var actualAction = $"{nurseStatusAction}?{nameof(patientPattern)}={patientPattern}";
 
                 return await client.GetJsonAsync<IEnumerable<PatientStatus>>(actualAction, token);

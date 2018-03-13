@@ -110,7 +110,7 @@ namespace Zapp.Schedule
                 configStore?.Value?.Fuse?.IgnoreInitialScheduleFailure == true
             )
             {
-                logService.Warn("Initial schedule failed.", ex);
+                logService.Error("Initial schedule failed.", ex);                
             }
         }
 

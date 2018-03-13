@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 
 namespace Zapp.Config
 {
@@ -18,5 +19,11 @@ namespace Zapp.Config
         /// </summary>
         [JsonProperty("port")]
         public int Port { get; set; } = 6464;
+
+        /// <summary>
+        /// Represents the timeout on the Patient health check requests
+        /// </summary>
+        [JsonProperty("patientRequestTimeout")]
+        public TimeSpan PatientRequestTimeout { get; set; } = TimeSpan.FromSeconds(100);
     }
 }
