@@ -188,9 +188,15 @@ namespace Zapp.Schedule
 
             using (var client = new HttpClient().AsLocalhost(restApiPort))
             {
-                await client.GetWithFailurePolicyAsync(teardownAction, httpFailurePolicy, token);
-
-                logService.Info($"Fusion: '{FusionId}' it's terminate event has been called with success.");
+                try
+                {
+                    await client.GetWithFailurePolicyAsync(teardownAction, httpFailurePolicy, token);
+                    logService.Info($"Fusion: '{FusionId}' it's terminate event has been called with success.");
+                }
+                catch (Exception ex)
+                {
+                    logService.Warn($"Fusion: '{FusionId}' failed calling terminate event");
+                }
             }
         }
 
