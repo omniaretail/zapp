@@ -481,7 +481,7 @@ namespace Zapp.Schedule
             }
             catch (Exception ex)
             {
-                logService?.Fatal("Failed to terminate all active processes.", ex);
+                logService?.Error("Failed to terminate all active processes.", ex);
             }
 
             syncLock?.Dispose();
