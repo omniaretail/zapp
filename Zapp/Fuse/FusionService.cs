@@ -102,17 +102,17 @@ namespace Zapp.Fuse
 
             var fusionIds = announcement.GetFusionIds();
 
-            Parallel.ForEach(fusionIds, opts, (_, state) =>
+            Parallel.ForEach(fusionIds, opts, (fusionId, state) =>
             {
                 try
                 {
-                    ExtractFusion(_, announcement);
+                    ExtractFusion(fusionId, announcement);
                 }
                 catch (Exception ex)
                 {
                     state.Stop();
 
-                    throw new FusionException(FusionException.ExtractionFailure, _, ex);
+                    throw new FusionException(FusionException.ExtractionFailure, fusionId, ex);
                 }
             });
         }
@@ -158,7 +158,7 @@ namespace Zapp.Fuse
 
             packageVersionValidator
                 .ConfirmAvailability(packageVersions);
-
+            
             using (var packageStream = new MemoryStream())
             {
                 var fusion = fusionFactory
